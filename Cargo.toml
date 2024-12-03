@@ -1,0 +1,7 @@
+[workspace]
+members = ["psycho_duel"]
+resolver = "2"
+default-members = ["psycho_duel"]
+
+[profile.dev.package."*"]
+opt-level = 3

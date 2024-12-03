@@ -1,0 +1,11 @@
+[package]
+name = "psycho_duel"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+# Bevy core related dependencies
+bevy = { version = "0.14.2", features = ["multi_threaded", "serialize", "bevy_state", "dynamic_linking"] } # Warning disable dynamic linking once we deploy the game
+bevy_dylib = "0.14.2"
+log = { version = "*", features = ["max_level_debug", "release_max_level_warn"] }
+
