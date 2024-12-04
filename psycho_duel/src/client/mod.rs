@@ -7,7 +7,6 @@ use bevy_inspector_egui::DefaultInspectorConfigPlugin;
 pub use lightyear::prelude::client::*;
 use lightyear::prelude::*;
 use std::net::{IpAddr, Ipv4Addr, SocketAddr};
-use std::num::NonZero;
 
 const CLIENT_ADDR: SocketAddr = SocketAddr::new(IpAddr::V4(Ipv4Addr::LOCALHOST), 4000);
 

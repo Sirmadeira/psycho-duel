@@ -1,4 +1,4 @@
-<style>
+<!-- <style>
 body {
     background: linear-gradient(to bottom right, rgba(46, 46, 46, 0.9), rgba(60, 60, 60, 0.9)), url('fog_texture.jpg');
     background-size: cover;
@@ -15,7 +15,7 @@ p, li {
     color: #e0e0e0;
     text-shadow: 0px 2px 4px rgba(0, 0, 0, 0.6); /* Subtle elevation for body text */
 }
-</style>
+</style> -->
 
 # Psycho Duel
 
