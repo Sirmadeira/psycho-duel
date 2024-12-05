@@ -2,7 +2,7 @@ use crate::server::SERVER_ADDR;
 use crate::shared::*;
 use bevy::prelude::*;
 use bevy::window::PrimaryWindow;
-use bevy_egui::{egui, EguiContext, EguiPlugin};
+use bevy_egui::{egui, EguiContext, EguiPlugin, EguiSet};
 use bevy_inspector_egui::DefaultInspectorConfigPlugin;
 pub use lightyear::prelude::client::*;
 use lightyear::prelude::*;
@@ -70,7 +70,7 @@ impl Plugin for CoreClientPlugin {
         app.add_plugins(EguiPlugin);
         app.add_plugins(DefaultInspectorConfigPlugin);
 
-        app.add_systems(Update, inspector_ui);
+        app.add_systems(Update, inspector_ui.after(EguiSet::BeginPass));
     }
 }
 
@@ -101,8 +101,9 @@ fn inspector_ui(world: &mut World) {
         //  Imagine this as nesting so first comes window, when we do,
         // add_content closure ui we are ensuring that scroll area is child of window.
         // All you need to do is add more and more .show to make heavier nests. And call ui a lot if you want to make buttons and such
-        egui::Window::new("UI")
-            // .min_size((100.0, 100.0))
+        egui::Window::new("WorldInspector")
+            // We gonna spawn it closed
+            .default_open(false)
             .show(egui_context.get_mut(), |ui| {
                 egui::ScrollArea::vertical().show(ui, |ui| {
                     // This is equivalent to "world inspector plugin"
@@ -113,9 +114,6 @@ fn inspector_ui(world: &mut World) {
                             world, ui,
                         );
                     });
-
-                    // ui.heading("Entities");
-                    // bevy_inspector_egui::bevy_inspector::ui_for_world_entities(world, ui);
                 })
             });
     } else {
