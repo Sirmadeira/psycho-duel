@@ -45,13 +45,11 @@ pub struct CoreServerPlugin;
 impl Plugin for CoreServerPlugin {
     fn build(&self, app: &mut App) {
         // Different from client server doesnt require a lot of things, we usually shouldnt have a screen or render anything on him.
-        app.add_plugins((MinimalPlugins, StatesPlugin));
-        //Setup log level for server
-        app.add_plugins(LogPlugin {
-            level: Level::INFO,
-            filter: "wgpu=error,bevy_render=info,bevy_ecs=warn".to_string(),
+        // But as we are in development stage we gonna live it the default ones
+        app.add_plugins(DefaultPlugins.set(bevy::log::LogPlugin {
+            level: bevy::log::Level::INFO,
             ..default()
-        });
+        }));
         // Add lightyear plugins
         app.add_plugins(build_server_plugin());
 

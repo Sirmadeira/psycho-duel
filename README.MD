@@ -19,8 +19,8 @@ p, li {
 
 # Psycho Duel
 
-Welcome to **Psycho Duel**, the arena awaits. Go beyond, be beyond, go greatness...  
-I am so tired of this... What is your name again? **UNKNOWN**, well it seems you are just like me.  
+Welcome to **Psycho Duel**, the arena awaits.. Go beyond, be beyond, go greatness...  
+I am so tired of this... this false habppiness... What is your name again? **UNKNOWN**, well it seems you are just like me.  
 
 You have only one sole task: climb the **Tower**. How?
 
