@@ -1,12 +1,11 @@
 use crate::shared::*;
-use bevy::log::{Level, LogPlugin};
 use bevy::prelude::*;
-use bevy::state::app::StatesPlugin;
 use lightyear::prelude::server::*;
 use lightyear::prelude::*;
+use player::ServerPlayerPlugin;
 use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 
-pub(crate) const SERVER_ADDR: SocketAddr = SocketAddr::new(IpAddr::V4(Ipv4Addr::LOCALHOST), 5000);
+pub const SERVER_ADDR: SocketAddr = SocketAddr::new(IpAddr::V4(Ipv4Addr::LOCALHOST), 5000);
 
 /// Here we create the lightyear [`ServerPlugins`], a series of system responsible for setuping the logic of our server
 /// It is replication interval, if he shall have input delay, and other similar aspects.
@@ -42,6 +41,8 @@ fn build_server_plugin() -> ServerPlugins {
 /// Centralization plugin - When we pass in the cli the arg "server" this guy runs
 pub struct CoreServerPlugin;
 
+mod player;
+
 impl Plugin for CoreServerPlugin {
     fn build(&self, app: &mut App) {
         // Different from client server doesnt require a lot of things, we usually shouldnt have a screen or render anything on him.
@@ -58,6 +59,9 @@ impl Plugin for CoreServerPlugin {
 
         // Add our server-specific logic. Here we will just start listening for incoming connections
         app.add_systems(Startup, start_server);
+
+        // Adding our self-made plugins
+        app.add_plugins(ServerPlayerPlugin);
     }
 }
 

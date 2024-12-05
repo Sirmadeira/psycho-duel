@@ -48,7 +48,7 @@ impl Plugin for CoreClientPlugin {
     fn build(&self, app: &mut App) {
         // Client usually requires every single plugin available in bevy
         app.add_plugins(DefaultPlugins.set(bevy::log::LogPlugin {
-            level: bevy::log::Level::DEBUG,
+            level: bevy::log::Level::INFO,
             ..default()
         }));
 
