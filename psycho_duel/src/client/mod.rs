@@ -61,6 +61,7 @@ pub enum ClientAppState {
 mod camera;
 mod egui;
 mod load_assets;
+mod player;
 
 impl Plugin for CoreClientPlugin {
     fn build(&self, app: &mut App) {

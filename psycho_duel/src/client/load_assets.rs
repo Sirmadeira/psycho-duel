@@ -16,8 +16,8 @@ pub struct GltfCollection {
         paths(
             // Weapons
             "weapons/katana.glb",
-            // Full characters
-            "characters/character_mesh.glb",
+            // Full characters - This guy is off for now to avoid annoying warning
+            // "characters/character_mesh.glb",
             // Heads
             "characters/parts/suit_head.glb",
             "characters/parts/soldier_head.glb",
