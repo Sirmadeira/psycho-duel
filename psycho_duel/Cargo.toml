@@ -15,3 +15,5 @@ clap = { version = "4.5", features = ["derive"] }
 # Bevy inspector and egui crates 
 bevy_egui = "0.30"
 bevy-inspector-egui = "0.27"
+# Bevy asset loader - Good plugin for avoiding "codey"
+bevy_asset_loader = "0.21"

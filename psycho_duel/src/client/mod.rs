@@ -1,3 +1,4 @@
+use crate::client::load_assets::LoadAssetsPlugin;
 use crate::server::SERVER_ADDR;
 use crate::shared::*;
 use bevy::prelude::*;
@@ -6,7 +7,6 @@ use egui::ClientEguiPlugin;
 pub use lightyear::prelude::client::*;
 use lightyear::prelude::*;
 use std::net::{IpAddr, Ipv4Addr, SocketAddr};
-
 /// Here we create the lightyear [`ClientPlugins`], a series of plugins responsible to setup our base client.
 fn build_client_plugin(client_id: &u64) -> ClientPlugins {
     // This is super temporary, we use this just to avoid overlapping addresses with other clients
@@ -52,14 +52,15 @@ pub struct CoreClientPlugin {
 #[derive(States, Debug, Clone, PartialEq, Eq, Hash, Default, Reflect)]
 pub enum ClientAppState {
     #[default]
-    // Started loading assets
+    /// Started loading assets - Once finish we can move forward
     LoadingAssets,
-    // Ingame
+    // In game state - First stage of our game
     Game,
 }
 
 mod camera;
 mod egui;
+mod load_assets;
 
 impl Plugin for CoreClientPlugin {
     fn build(&self, app: &mut App) {
@@ -78,6 +79,7 @@ impl Plugin for CoreClientPlugin {
         //Add selfmade plugins
         app.add_plugins(ClientCameraPlugin);
         app.add_plugins(ClientEguiPlugin);
+        app.add_plugins(LoadAssetsPlugin);
 
         // Add our client-specific logic. Here we will just connect to the server
         app.add_systems(Startup, connect_client);

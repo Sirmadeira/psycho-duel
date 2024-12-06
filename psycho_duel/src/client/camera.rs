@@ -1,5 +1,8 @@
 use bevy::prelude::*;
 
+
+
+/// Marks our main camera comp
 #[derive(Component, Reflect)]
 pub struct MarkerPrimaryCamera;
 

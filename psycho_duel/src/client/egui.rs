@@ -12,7 +12,7 @@ fn inspector_ui(world: &mut World) {
         .query_filtered::<&mut EguiContext, With<PrimaryWindow>>()
         .get_single(world)
     {
-        info_once!("Manage to grab egui form world");
+        info_once!("Forming states egui");
         // We clone here to avoid changin other eguis context
         let mut egui_context = egui_context.clone();
 

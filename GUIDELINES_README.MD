@@ -21,10 +21,12 @@ The project is divided into three core sub-plugins:
 
 ## Key Guidelines
 
+### 0. **Codey, god I hate codey**
+- I get it you wanna show off your skills that is why you write 1000 line of macaroni code yes I am talking to you (Sirmadeira), NO CODEY, make simple code.
+- Code is supposed to  be simple, avoid types everywhere if there is no reason for it avoid fancy stuff. Do the task and follow bevy struct usage.
+
 ### 1. **No Empty Struct Fields**
 - **Policy**: Empty struct fields are strictly prohibited. Every field in a struct must have a meaningful and valid value.  
-- **Example**: Avoid accessing fields like `struct.field.0` unless explicitly designed and documented.  
-- **Action**: If you encounter a struct field being accessed via `0` (or other unintended empty behaviors), refactor it immediately. If it cannot be justified, **remove it**.
 
 ### 2. **Code Consistency**
 - Follow consistent naming conventions across all plugins. Shared logic in the `shared` plugin must be decoupled and reusable by both `server` and `client`.
@@ -34,9 +36,19 @@ The project is divided into three core sub-plugins:
 - We want our code to be very modular, similar to the game Roblox, so we can easily turn on and off features via disabling plugins.
 
 ### 4. **Resources pre initialized**
-- We rarely want a resource to not be initialized right when we are booting up game. IF you gonna make a global variable use it and abuse it right in the beginning. Perhaps we can clear her memory on a later moment. Or perhaps we will always will want here ready and available
+- We rarely want a resource to not be initialized right when we are booting up game. IF you gonna make a global variable use it and abuse it right in the beginning. Perhaps we can clear her memory on a later moment. Or perhaps we will always will want her ready and available
 
 ### 5. **Abuse egui**
 - It is easy dont worry about it, is also very easy to despawn eguis in general. You made an interesting mechanic make an egui for it.
-- EXAMPLE: Made character customizer - Make egui for it. Then we worry about doing a cool UI.
+- EXAMPLE: Made character customizer - Make egui for it. Then we worry about doing a cool UI for it, lobby? Make an egui for it, cry yourself to sleep? Well EGUI is the answer
+
+## 6. **Marker on marker components**
+- Marker component are very usefull you when you have  multiple subtype components, I get it.
+- But hell man name them Marker something so everybody knows it is a marker, sometime we be tripping you get it dont you? thanks!
+
+## 7. **Want assets asset loader is for you**
+- So is very simple, just check load_assets file in client, wanna load assets do it via bevy asset loader, he can make maps vectors whatever you want for you.
+- He also makes loading states which are extremely usefull. He avoid so much codey i love him.
+
+
 ---
