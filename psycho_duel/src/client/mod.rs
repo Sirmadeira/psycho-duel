@@ -1,15 +1,15 @@
 use crate::server::SERVER_ADDR;
 use crate::shared::*;
 use bevy::prelude::*;
+use camera::ClientCameraPlugin;
+use egui::ClientEguiPlugin;
 pub use lightyear::prelude::client::*;
 use lightyear::prelude::*;
 use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 
-#[derive(Component, Reflect)]
-pub struct MarkerPrimaryCamera;
-
 /// Here we create the lightyear [`ClientPlugins`], a series of plugins responsible to setup our base client.
 fn build_client_plugin(client_id: &u64) -> ClientPlugins {
+    // This is super temporary, we use this just to avoid overlapping addresses with other clients
     let client_addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, *client_id as u8)), 4000);
 
     // The NetConfig specifies how we establish a connection with the server.
@@ -48,6 +48,19 @@ pub struct CoreClientPlugin {
     pub client_id: u64,
 }
 
+/// Essential state for functionality - Basically tell me what is the current state of our app
+#[derive(States, Debug, Clone, PartialEq, Eq, Hash, Default, Reflect)]
+pub enum ClientAppState {
+    #[default]
+    // Started loading assets
+    LoadingAssets,
+    // Ingame
+    Game,
+}
+
+mod camera;
+mod egui;
+
 impl Plugin for CoreClientPlugin {
     fn build(&self, app: &mut App) {
         // Client usually requires every single plugin available in bevy
@@ -56,28 +69,25 @@ impl Plugin for CoreClientPlugin {
             ..default()
         }));
 
-        // This looks weird but just imagine you are passing a series of args for a series of systems
+        // This looks weird but just imagine you are building a lot of plugins at once
         app.add_plugins(build_client_plugin(&self.client_id));
 
         // Add our shared plugin containing the protocol + other shared behaviour
         app.add_plugins(CoreSharedPlugin);
 
+        //Add selfmade plugins
+        app.add_plugins(ClientCameraPlugin);
+        app.add_plugins(ClientEguiPlugin);
+
         // Add our client-specific logic. Here we will just connect to the server
         app.add_systems(Startup, connect_client);
 
-        // Spawns our camera
-        app.add_systems(Startup, spawn_camera);
+        // Initializing center state of client
+        app.init_state::<ClientAppState>();
     }
 }
 
 /// Connect to the server
 fn connect_client(mut commands: Commands) {
     commands.connect_client();
-}
-
-fn spawn_camera(mut commands: Commands) {
-    commands
-        .spawn(Camera3dBundle::default())
-        .insert(MarkerPrimaryCamera)
-        .insert(Name::new("MainCamera"));
 }

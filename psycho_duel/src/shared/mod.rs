@@ -30,7 +30,10 @@ pub mod protocol;
 
 impl Plugin for CoreSharedPlugin {
     fn build(&self, app: &mut App) {
-        app.add_plugins(SharedEgui);
+        // Protocol plugin- SUPER DUPER IMPORTANT
         app.add_plugins(ProtocolPlugin);
+
+        // Self made plugins
+        app.add_plugins(SharedEgui);
     }
 }

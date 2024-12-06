@@ -2,7 +2,6 @@ use bevy::prelude::*;
 use bevy::window::PrimaryWindow;
 use bevy_egui::{egui, EguiContext, EguiPlugin};
 use bevy_inspector_egui::DefaultInspectorConfigPlugin;
-
 /// Centralization plugin - Utilized to store all logic related to egui
 pub struct SharedEgui;
 
@@ -42,6 +41,12 @@ fn inspector_ui(world: &mut World) {
                             world, ui,
                         );
                     });
+                    // egui::CollapsingHeader::new("States").show(ui, |ui| {
+                    //     // Wair for PR
+                    //     // bevy_inspector_egui::bevy_inspector::ui_for_state::<NetworkingState>(
+                    //     //     world, ui,
+                    //     // );
+                    // });
                 })
             });
     } else {

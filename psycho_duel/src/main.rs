@@ -1,7 +1,6 @@
 use bevy::prelude::*;
 use clap::Parser;
 use client::CoreClientPlugin;
-use lightyear::prelude::ClientId;
 use server::CoreServerPlugin;
 
 mod client;
