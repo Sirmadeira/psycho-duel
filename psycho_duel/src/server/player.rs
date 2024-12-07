@@ -7,6 +7,8 @@ use lightyear::prelude::{NetworkTarget, ReplicationTarget};
 use lightyear::server::events::ConnectEvent;
 use lightyear::server::events::DisconnectEvent;
 
+use super::protocol::{PlayerMarker, PlayerVisuals};
+
 /// Simple map - That points out the player entity with that given id
 /// Pass a client_id get it is server player entity
 #[derive(Resource, Default, Reflect)]
@@ -35,7 +37,7 @@ fn spawn_player_when_connects(
 
 /// Nested function - Responsible for spawning player
 fn spawn_player(client_id: &ClientId, commands: &mut Commands) -> Entity {
-    // This guy is very important tells us the replication type for our player entity
+    // Okay here is a quick explanation of this guy - He 
     let replicate = Replicate {
         target: ReplicationTarget {
             target: NetworkTarget::All,
@@ -52,7 +54,9 @@ fn spawn_player(client_id: &ClientId, commands: &mut Commands) -> Entity {
     };
     //Spawning ids
     let id = commands
-        .spawn(PlayerId { id: *client_id })
+        .spawn(PlayerMarker)
+        .insert(PlayerId { id: *client_id })
+        .insert(PlayerVisuals::default())
         .insert(Name::new(format!("Player {}", client_id)))
         .insert(replicate)
         .id();

@@ -33,7 +33,6 @@ fn inspector_ui(world: &mut World) {
                 })
             });
     } else {
-        warn!("Something is terribly wrong cant grab egui context");
         return;
     };
 }

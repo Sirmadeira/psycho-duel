@@ -51,9 +51,9 @@ impl Plugin for LoadAssetsPlugin {
         app.add_loading_state(
             // Simple syntax sugar for our state transition and which specific collections we shall load, this can be used multiple times.
             LoadingState::new(ClientAppState::LoadingAssets)
-                .continue_to_state(ClientAppState::Game)
                 .load_collection::<GltfCollection>()
-                .load_collection::<Images>(),
+                .load_collection::<Images>()
+                .continue_to_state(ClientAppState::Game),
         );
     }
 }

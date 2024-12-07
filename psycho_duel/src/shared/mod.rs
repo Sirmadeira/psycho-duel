@@ -22,6 +22,7 @@ pub fn shared_config() -> SharedConfig {
 }
 
 /// Systems and protocols, that need to be shared between server and client will be stationed here.
+/// Warning - Whenever adjusting shared plugins, also reset server. I tend to make that mistake
 pub struct CoreSharedPlugin;
 
 // All mods in shared need to be pubbed

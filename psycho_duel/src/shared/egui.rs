@@ -15,6 +15,8 @@ impl Plugin for SharedEgui {
 
 /// This is really close to what happens when you utilize worldinspectorplugin from bevy-inspector-egui
 /// The difference is this guy is configurable meaning we can adjust him according to resolution and such
+/// When querying for world, we are basically making this function independent of external systems.
+/// We are going to run this guy doesnt matter what happens
 fn inspector_ui(world: &mut World) {
     // This is basically comp_egui_context: Query<&EguiContext, With<PrimaryWindow>>,
     if let Ok(egui_context) = world
@@ -50,7 +52,6 @@ fn inspector_ui(world: &mut World) {
                 })
             });
     } else {
-        warn!("Something is terribly wrong cant grab egui context");
         return;
     };
 }

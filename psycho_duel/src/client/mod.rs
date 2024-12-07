@@ -6,6 +6,7 @@ use camera::ClientCameraPlugin;
 use egui::ClientEguiPlugin;
 pub use lightyear::prelude::client::*;
 use lightyear::prelude::*;
+use player::ClientPlayerPlugin;
 use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 /// Here we create the lightyear [`ClientPlugins`], a series of plugins responsible to setup our base client.
 fn build_client_plugin(client_id: &u64) -> ClientPlugins {
@@ -80,10 +81,11 @@ impl Plugin for CoreClientPlugin {
         //Add selfmade plugins
         app.add_plugins(ClientCameraPlugin);
         app.add_plugins(ClientEguiPlugin);
+        app.add_plugins(ClientPlayerPlugin);
         app.add_plugins(LoadAssetsPlugin);
 
         // Add our client-specific logic. Here we will just connect to the server
-        app.add_systems(Startup, connect_client);
+        app.add_systems(OnEnter(ClientAppState::Game), connect_client);
 
         // Initializing center state of client
         app.init_state::<ClientAppState>();

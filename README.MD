@@ -31,6 +31,7 @@ The project is divided into three core sub-plugins:
 ### 2. **Code Consistency**
 - Follow consistent naming conventions across all plugins. Shared logic in the `shared` plugin must be decoupled and reusable by both `server` and `client`.
 - Use proper comments and documentation where required. Undocumented "magic numbers" or placeholder values are forbidden.
+- OH YEAH, if overlapping divisions like player in server, and player in client add the keyword client and server.
 
 ### 3. **Plugins EVERYWHERE**
 - We want our code to be very modular, similar to the game Roblox, so we can easily turn on and off features via disabling plugins.
