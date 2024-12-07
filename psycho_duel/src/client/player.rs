@@ -49,12 +49,21 @@ fn spawn_visual_scene(
 ) -> Option<Entity> {
     if let Some(gltf) = gltf_collection.gltf_files.get(file_path) {
         if let Some(loaded_gltf) = gltfs.get(gltf) {
+            // The name will always be the last part of the file path to string
+            let sliced_str = file_path
+                .split("/")
+                .last()
+                .unwrap_or(&file_path)
+                .to_string();
+
             let scene = loaded_gltf.scenes[0].clone_weak();
             let id = commands
                 .spawn(SceneBundle {
                     scene: scene,
+
                     ..default()
                 })
+                .insert(Name::new(sliced_str))
                 .id();
             Some(id)
         } else {

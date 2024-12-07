@@ -31,19 +31,21 @@ fn inspector_ui(world: &mut World) {
         // All you need to do is add more and more .show to make heavier nests.
         // If you want to add more mechanics just call egui::some_enum or ui::some_enum. Some enum being the thousands of options available
         // Important usually people use window - but since I dont our camera systems or input systems to be considered well panel it is.
-        egui::SidePanel::left("World debug panel")
+        egui::SidePanel::left("left_panel")
             .resizable(true)
+            .default_width(250.0)
             .show(egui_context.get_mut(), |ui| {
                 egui::ScrollArea::both().show(ui, |ui| {
+                    ui.heading("World inspector");
                     // This is equivalent to "world inspector plugin"
                     bevy_inspector_egui::bevy_inspector::ui_for_world(world, ui);
-
                     egui::CollapsingHeader::new("Materials").show(ui, |ui| {
-                        ui.set_width(400.0);
                         bevy_inspector_egui::bevy_inspector::ui_for_assets::<StandardMaterial>(
                             world, ui,
                         );
                     });
+                    // Makes him unlimited
+                    ui.allocate_space(ui.available_size());
                 })
             });
     } else {
