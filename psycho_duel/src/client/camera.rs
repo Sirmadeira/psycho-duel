@@ -1,11 +1,10 @@
 use bevy::prelude::*;
 
-
-
-/// Marks our main camera comp
+/// Marks our main camera entity
 #[derive(Component, Reflect)]
 pub struct MarkerPrimaryCamera;
 
+/// Centralization plugin, everything correlated to cameras will be inserted here
 pub struct ClientCameraPlugin;
 
 impl Plugin for ClientCameraPlugin {
@@ -14,8 +13,6 @@ impl Plugin for ClientCameraPlugin {
         app.add_systems(Startup, spawn_camera);
     }
 }
-
-
 
 fn spawn_camera(mut commands: Commands) {
     commands

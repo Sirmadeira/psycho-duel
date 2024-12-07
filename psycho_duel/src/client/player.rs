@@ -6,6 +6,7 @@ use super::{
     protocol::{PlayerId, PlayerVisuals},
 };
 
+/// Centralization plugin - Everything correlated to player shall be inserted here
 pub struct ClientPlayerPlugin;
 
 /// Whenever we spawn an entity with player visuals, we are going to check if she is predicted if so.
@@ -41,7 +42,7 @@ fn render_predicted_player(
 
 /// Nested function necessary that intakes a given a file_path string and spawns the given scene for it.
 fn spawn_visual_scene(
-    file_path: &String,
+    file_path: &str,
     gltf_collection: &Res<GltfCollection>,
     gltfs: &Res<Assets<Gltf>>,
     commands: &mut Commands,

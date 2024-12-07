@@ -1,11 +1,12 @@
 use crate::shared::ClientId;
 use bevy::prelude::*;
+use bevy_inspector_egui::prelude::ReflectInspectorOptions;
+use bevy_inspector_egui::InspectorOptions;
 use lightyear::prelude::client::ComponentSyncMode;
 use lightyear::prelude::AppComponentExt;
 use lightyear::prelude::ChannelDirection;
 use serde::Deserialize;
 use serde::Serialize;
-
 /// Essential struct that marks our player predicted entity.
 #[derive(Component, Reflect, Serialize, Deserialize, PartialEq, Clone)]
 pub struct PlayerMarker;
@@ -18,8 +19,10 @@ pub struct PlayerId {
 }
 
 /// Essential component utilized to tell me what exactly are
-#[derive(Component, Reflect, Serialize, Deserialize, PartialEq, Clone)]
+#[derive(Component, Reflect, Serialize, Deserialize, PartialEq, Clone, InspectorOptions)]
+#[reflect(InspectorOptions)]
 pub struct PlayerVisuals {
+    #[inspector()]
     /// Base skeleton to fit into
     skeleton: String,
     /// Character available head
@@ -57,7 +60,7 @@ pub struct ProtocolPlugin;
 
 impl Plugin for ProtocolPlugin {
     fn build(&self, app: &mut App) {
-        // Essential infos - Channeldirection = Who send message to who, is it  server to client, client to server?
+        // Essential infos - Channeldirection = Who sends message to who, is it  server to client, client to server?
         // Add prediction - Imagine  it like this - Either server or client, spawns entity with these shared components. Example - commands.spawn(PlayerMarker)
         // -> Via register_component and channel direction we define which should be transmissible. Important - the replicate component says - What entities should be replicated, or predicted, or interpolated and to whom
         // -> If when you added Replicated, you added a sync_targer prediction. You are going to spawn a predicted entity, if you added add_prediction in register_component
@@ -72,5 +75,9 @@ impl Plugin for ProtocolPlugin {
         app.register_component::<Name>(ChannelDirection::Bidirectional)
             .add_prediction(ComponentSyncMode::Once)
             .add_interpolation(ComponentSyncMode::Once);
+
+        // Debug registering
+        app.register_type::<PlayerId>();
+        app.register_type::<PlayerVisuals>();
     }
 }
