@@ -3,7 +3,6 @@ use bevy::window::PrimaryWindow;
 use leafwing_input_manager::prelude::*;
 use leafwing_input_manager::Actionlike;
 
-use super::egui;
 use super::egui::EguiWantsFocus;
 
 /// Centralization plugin, everything correlated to cameras will be inserted here

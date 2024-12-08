@@ -58,6 +58,7 @@ fn inspector_ui(world: &mut World) {
             egui::ScrollArea::both().show(ui, |ui| {
                 ui.label("States inspector");
                 bevy_inspector_egui::bevy_inspector::ui_for_state::<ClientAppState>(world, ui);
+                // Makes dragable panel size unlimited
                 ui.allocate_space(ui.available_size());
                 // Wait for PR
                 // bevy_inspector_egui::bevy_inspector::ui_for_state::<NetworkingState>(
@@ -83,7 +84,7 @@ fn check_if_egui_wants_focus(
         //Grabin context from most probably primary window
         if let Some(ctx) = contexts.try_ctx_for_entity_mut(window) {
             // Check if wants pointer input or keyboard input
-            let mut value = ctx.wants_pointer_input() || ctx.wants_keyboard_input();
+            let value = ctx.wants_pointer_input() || ctx.wants_keyboard_input();
             value
         } else {
             false
