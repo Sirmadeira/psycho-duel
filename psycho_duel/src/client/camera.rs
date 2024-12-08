@@ -1,8 +1,10 @@
-use bevy::math::VectorSpace;
 use bevy::prelude::*;
 use bevy::window::PrimaryWindow;
 use leafwing_input_manager::prelude::*;
 use leafwing_input_manager::Actionlike;
+
+use super::egui;
+use super::egui::EguiWantsFocus;
 
 /// Centralization plugin, everything correlated to cameras will be inserted here
 pub struct ClientCameraPlugin;
@@ -57,9 +59,25 @@ impl Plugin for ClientCameraPlugin {
         // Spawns our camera
         app.add_systems(Startup, spawn_camera);
         // In update for simplicity  Chain  - To ensure that we apply zoom in the same frame for smoothing
-        app.add_systems(Update, (adjust_zoom_info, orbit_camera).chain());
+        app.add_systems(
+            Update,
+            (adjust_zoom_info, orbit_camera)
+                .run_if(rc_egui_wants_focus)
+                .chain(),
+        );
         // Debug for leafwing
         app.register_type::<InputMap<CameraMovement>>();
+    }
+}
+
+/// Run condition - Ensures that our camera doesnt zoom or move when we playing with egui
+fn rc_egui_wants_focus(egui_wants_focus: Res<EguiWantsFocus>) -> bool {
+    if egui_wants_focus.prev && egui_wants_focus.curr {
+        //If egui wants focus in both prev and curr frame turn off the systems responsible for orbiting
+        false
+    } else {
+        // Run if not in egui
+        true
     }
 }
 
@@ -82,6 +100,21 @@ fn spawn_camera(mut commands: Commands) {
             yaw_limit: None,
             pitch_limit: Some((-std::f32::consts::PI / 2.0, std::f32::consts::PI / 20.0)),
         });
+}
+
+/// Responsible for changing zoom information
+fn adjust_zoom_info(
+    mut cam_q: Query<(&mut CamInfo, &ActionState<CameraMovement>), With<MarkerPrimaryCamera>>,
+) {
+    if let Ok((mut cam, camera_movement)) = cam_q.get_single_mut() {
+        let scroll = camera_movement.value(&CameraMovement::Zoom);
+        // If there is any type of scroll movement, we will capture it and adjust our zoom according to it
+        // We use double minus here because of -y equals go back, but you know you wanna increase Z in this case
+        if scroll.abs() > 0.0 {
+            let new_radius = cam.zoom.radius - scroll * cam.zoom.radius * cam.zoom_sens;
+            cam.zoom.radius = new_radius.clamp(cam.zoom.min, cam.zoom.max);
+        }
+    }
 }
 
 /// Enables camera to orbit according to mouse movement, is worth mentioning this camera will remain in place
@@ -126,24 +159,9 @@ fn orbit_camera(
             cam_transform.rotation = Quat::from_euler(EulerRot::YXZ, new_yaw, new_pitch, 0.0);
         }
 
-        // Update camera translation based on zoom radius
+        // Update camera rotation bvased on zoom - Also applies zoom.
         let rot_matrix = Mat3::from_quat(cam_transform.rotation);
         cam_transform.translation = rot_matrix.mul_vec3(Vec3::new(0.0, 0.0, cam_info.zoom.radius));
-    }
-}
-
-/// Responsible for changing zoom information
-fn adjust_zoom_info(
-    mut cam_q: Query<(&mut CamInfo, &ActionState<CameraMovement>), With<MarkerPrimaryCamera>>,
-) {
-    if let Ok((mut cam, camera_movement)) = cam_q.get_single_mut() {
-        let scroll = camera_movement.value(&CameraMovement::Zoom);
-        // If there is any type of scroll movement, we will capture it and adjust our zoom according to it
-        // We use double minus here because of -y equals go back, but you know you wanna increase Z in this case
-        if scroll.abs() > 0.0 {
-            let new_radius = cam.zoom.radius - scroll * cam.zoom.radius * cam.zoom_sens;
-            cam.zoom.radius = new_radius.clamp(cam.zoom.min, cam.zoom.max);
-        }
     }
 }
 
