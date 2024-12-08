@@ -20,9 +20,9 @@ fn inspector_ui(world: &mut World) {
         // add_content closure ui we are ensuring that scroll area is child of window.
         // All you need to do is add more and more .show to make heavier nests. And call ui a lot if you want to make buttons and such
         egui::SidePanel::right("right_panel").show(egui_context.get_mut(), |ui| {
-            ui.heading("Client focused debugging");
+            ui.heading("Client debugging");
             egui::ScrollArea::both().show(ui, |ui| {
-                ui.heading("States inspector");
+                ui.label("States inspector");
                 bevy_inspector_egui::bevy_inspector::ui_for_state::<ClientAppState>(world, ui);
                 ui.allocate_space(ui.available_size());
                 // Wait for PR

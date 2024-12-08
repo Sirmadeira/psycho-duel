@@ -17,3 +17,5 @@ bevy_egui = "0.30"
 bevy-inspector-egui = "0.27"
 # Bevy asset loader - Good plugin for avoiding "codey"
 bevy_asset_loader = "0.21"
+# Bevy input manager - Basically a mapper for inputs, we can grab joysticks and much more
+leafwing-input-manager = "0.15"
