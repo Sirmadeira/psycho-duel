@@ -9,6 +9,13 @@ use super::{
 /// Centralization plugin - Everything correlated to player shall be inserted here
 pub struct ClientPlayerPlugin;
 
+impl Plugin for ClientPlayerPlugin {
+    fn build(&self, app: &mut App) {
+        // Observes because This is not gonna run all the time just when we connect and replicate the entities
+        app.observe(render_predicted_player);
+        //Update because it is waiting for added predicted to appear
+    }
+}
 /// Whenever we spawn an entity with player visuals, we are going to check if she is predicted if so.
 /// We are going to spawn their given scenes.
 /// IMPORTANT - Observers are essential here, because them we dont need to worry, about resource management.
@@ -40,7 +47,7 @@ fn render_predicted_player(
     }
 }
 
-/// Nested function necessary that intakes a given a file_path string and spawns the given scene for it.
+/// Nested function - Necessary that intakes a given a file_path string and spawns the given scene for it.
 fn spawn_visual_scene(
     file_path: &str,
     gltf_collection: &Res<GltfCollection>,
@@ -76,13 +83,5 @@ fn spawn_visual_scene(
             file_path
         );
         None
-    }
-}
-
-impl Plugin for ClientPlayerPlugin {
-    fn build(&self, app: &mut App) {
-        // Observes because This is not gonna run all the time just when we connect and replicate the entities
-        app.observe(render_predicted_player);
-        //Update because it is waiting for added predicted to appear
     }
 }

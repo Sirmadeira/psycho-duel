@@ -17,20 +17,20 @@ impl Plugin for SharedEgui {
 /// The difference is this guy is configurable meaning we can adjust him according to resolution changes and such
 /// Egui contexts is a system_parameter extremely usefull for reducing boilerplate
 fn inspector_ui(world: &mut World) {
-    // This is basically comp_egui_context: Query<&EguiContext, With<PrimaryWindow>>,
+    // This is basically comp_egui_context: Query<&EguiContext, With<PrimaryWindow>>, here we are grabbin the egui context from our primary window
+    // Logically this is supposed to be the only context available unless you are doing some pretty trippy things, 
+    //We do it like this so we can grab world for bevy inspector
     if let Ok(egui_context) = world
         .query_filtered::<&mut EguiContext, With<PrimaryWindow>>()
         .get_single(world)
     {
-        info_once!("Manage to grab egui form world");
-        // We clone here to avoid changin egui context directly
+        info_once!("Manage to grab egui fromm world");
+
         let mut egui_context = egui_context.clone();
 
-        // Imagine this as writing your egui screen so first comes side panel, when we do,
-        // add_content closure ui we are ensuring that scroll area is child of that side panel.
-        // All you need to do is add more and more .show to make heavier nests.
-        // If you want to add more mechanics just call egui::some_enum or ui::some_enum. Some enum being the thousands of options available
-        // Important usually people use window - but since I dont our camera systems or input systems to be considered well panel it is.
+        // Imagine this as nesting so first comes window, so when we do add_content closure ui we are ensuring that scroll area is child of window.
+        // All you need to do is add more and more .show to make heavier nests. And call ui a lot if you want to make buttons and such
+        // Egui context.get_mut grab the underlying context it is a handy way of grab self without the annoyance of self arguments mid usage
         egui::SidePanel::left("left_panel")
             .resizable(true)
             .default_width(250.0)

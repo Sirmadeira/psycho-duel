@@ -54,7 +54,8 @@ The project is divided into three core sub-plugins:
 ## 8. **Control is everything**
 - You see I like crates as much as the next guy, but never ever use low code option that take out our ability to do something.
 - Example: We have character controller in rapier right? Well that thing is good if this was an alpha which it isnt we must be able to CONTROL everything.
-- Other example: Lightyear makes spawning and despawning character session based, of course this avoids usage of code. But it takes our ability to control AFK status. 
+- Other example: Lightyear makes spawning and despawning character session based, of course this avoids usage of code. But it takes our ability to control AFK status.
+
 
 
 ---

@@ -1,5 +1,5 @@
-use bevy::prelude::*;
 use bevy::window::PrimaryWindow;
+use bevy::{prelude::*, utils::tracing::Event};
 use bevy_egui::{egui, EguiContext, EguiContexts, EguiSet};
 
 use crate::client::ClientAppState;
@@ -24,12 +24,21 @@ pub struct EguiWantsFocus {
     pub curr: bool,
 }
 
+#[derive(Event, Debug)]
+pub struct ChangeCharEvent;
+
 impl Plugin for ClientEguiPlugin {
     fn build(&self, app: &mut App) {
         //Resouce registration
         app.init_resource::<EguiWantsFocus>();
+        //Events
+        app.add_event::<ChangeCharEvent>();
 
-        app.add_systems(Update, inspector_ui);
+        //In update by default
+        app.add_systems(Update, (inspector_ui, char_customizer_ui));
+
+        // In post update to ensure that in preupdate we have the correct prev and curr value
+        // After init contexts because we expect the Egui to exist.
         app.add_systems(
             PostUpdate,
             check_if_egui_wants_focus.after(EguiSet::InitContexts),
@@ -41,18 +50,20 @@ impl Plugin for ClientEguiPlugin {
 }
 
 fn inspector_ui(world: &mut World) {
-    // This is basically comp_egui_context: Query<&EguiContext, With<PrimaryWindow>>,
+    // This is basically comp_egui_context: Query<&EguiContext, With<PrimaryWindow>>, here we are grabbin the egui context from our primary window
+    // Logically this is supposed to be the only context available unless you are doing some pretty trippy things,
+    // We do it like this so we can grab world for bevy inspector
     if let Ok(egui_context) = world
         .query_filtered::<&mut EguiContext, With<PrimaryWindow>>()
         .get_single(world)
     {
         info_once!("Forming states egui");
-        // We clone here to avoid changin other eguis context
+
         let mut egui_context = egui_context.clone();
 
-        //  Imagine this as nesting so first comes window, when we do,
-        // add_content closure ui we are ensuring that scroll area is child of window.
+        // Imagine this as nesting so first comes window, so when we do add_content closure ui we are ensuring that scroll area is child of window.
         // All you need to do is add more and more .show to make heavier nests. And call ui a lot if you want to make buttons and such
+        // Egui context.get_mut grab the underlying context it is a handy way of grab self without the annoyance of self arguments mid usage
         egui::SidePanel::right("right_panel").show(egui_context.get_mut(), |ui| {
             ui.heading("Client debugging");
             egui::ScrollArea::both().show(ui, |ui| {
@@ -76,12 +87,9 @@ fn check_if_egui_wants_focus(
     windows: Query<Entity, With<Window>>,
     mut wants_focus: ResMut<EguiWantsFocus>,
 ) {
-    // The window that the user is interacting with and the window that contains the egui context
-    // that the user is interacting with are always going to be the same. Therefore, we can assume
-    // that if any of the egui contexts want focus, then it must be the one that the user is
-    // interacting with.
+    // The window that the user is interacting with and the window that contains the egui context are almost always the same. Therefore, we can assume
+    // that if any of the egui contexts want focus, then it must be the one that the user is interacting with.
     let new_wants_focus = windows.iter().any(|window| {
-        //Grabin context from most probably primary window
         if let Some(ctx) = contexts.try_ctx_for_entity_mut(window) {
             // Check if wants pointer input or keyboard input
             let value = ctx.wants_pointer_input() || ctx.wants_keyboard_input();
@@ -95,6 +103,29 @@ fn check_if_egui_wants_focus(
         prev: wants_focus.curr,
         curr: new_wants_focus,
     };
-    info!("New res {:?}", new_res);
+    // info!("New res {:?}", new_res);
     wants_focus.set_if_neq(new_res);
+}
+
+/// A developer egui utilized to limit test our game character customizer
+fn char_customizer_ui(world: &mut World) {
+    if let Ok(egui_context) = world
+        .query_filtered::<&mut EguiContext, With<PrimaryWindow>>()
+        .get_single(world)
+    {
+        let mut egui_context = egui_context.clone();
+
+        egui::Window::new("Char custumizar").show(egui_context.get_mut(), |ui| {
+            egui::ScrollArea::both().show(ui, |ui| {
+                if ui.button("Change event").clicked() {
+                    if let Some(mut event) = world.get_resource_mut::<Events<ChangeCharEvent>>() {
+                        info!("Found event {:?}", event);
+                        event.send(ChangeCharEvent);
+                    } else {
+                        warn!("Couldnt send event in egui");
+                    }
+                }
+            })
+        });
+    }
 }
