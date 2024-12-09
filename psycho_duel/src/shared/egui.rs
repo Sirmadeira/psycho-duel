@@ -18,7 +18,7 @@ impl Plugin for SharedEgui {
 /// Egui contexts is a system_parameter extremely usefull for reducing boilerplate
 fn inspector_ui(world: &mut World) {
     // This is basically comp_egui_context: Query<&EguiContext, With<PrimaryWindow>>, here we are grabbin the egui context from our primary window
-    // Logically this is supposed to be the only context available unless you are doing some pretty trippy things, 
+    // Logically this is supposed to be the only context available unless you are doing some pretty trippy things,
     //We do it like this so we can grab world for bevy inspector
     if let Ok(egui_context) = world
         .query_filtered::<&mut EguiContext, With<PrimaryWindow>>()
@@ -26,6 +26,7 @@ fn inspector_ui(world: &mut World) {
     {
         info_once!("Manage to grab egui fromm world");
 
+        // We clone here to ensure the context remains concurrrently queryable I think ?
         let mut egui_context = egui_context.clone();
 
         // Imagine this as nesting so first comes window, so when we do add_content closure ui we are ensuring that scroll area is child of window.

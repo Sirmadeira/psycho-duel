@@ -1,3 +1,5 @@
+use std::ops::DerefMut;
+
 use bevy::prelude::*;
 use bevy::window::PrimaryWindow;
 use bevy_egui::{egui, EguiContext, EguiContexts, EguiSet};
@@ -24,16 +26,36 @@ pub struct EguiWantsFocus {
     pub curr: bool,
 }
 
+/// Gives me the current parts in ui we are able to customize,utilized in combo box button
+/// Locals - Variables that are unique to a system, and only have a reference to that system.
 #[derive(PartialEq, Debug, Default)]
 enum Parts {
     #[default]
     Head,
     Torso,
-    Legs,
+    Leg,
 }
 
+/// Statig string references I dont expect this variable to change mid system running as I dont see any reason why
+const HEAD_PATHS: [&'static str; 2] = [
+    "characters/parts/suit_head.glb",
+    "characters/parts/soldier_head.glb",
+];
+
+const TORSO_PATHS: [&'static str; 2] = [
+    "characters/parts/scifi_torso.glb",
+    "characters/parts/soldier_torso.glb",
+];
+
+const LEG_PATHS: [&'static str; 2] = [
+    "characters/parts/witch_legs.glb",
+    "characters/parts/soldier_legs.glb",
+];
+
 #[derive(Event, Debug)]
-pub struct ChangeCharEvent;
+pub struct ChangeCharEvent {
+    path_to_part: String,
+}
 
 impl Plugin for ClientEguiPlugin {
     fn build(&self, app: &mut App) {
@@ -66,7 +88,6 @@ fn inspector_ui(world: &mut World) {
         .get_single(world)
     {
         info_once!("Forming states egui");
-
         let mut egui_context = egui_context.clone();
 
         // Imagine this as nesting so first comes window, so when we do add_content closure ui we are ensuring that scroll area is child of window.
@@ -121,18 +142,65 @@ fn char_customizer_ui(world: &mut World, mut selected_button: Local<Parts>) {
         .query_filtered::<&mut EguiContext, With<PrimaryWindow>>()
         .get_single(world)
     {
+        // Clone to grab it concurrently
         let mut egui_context = egui_context.clone();
+
+        // Cleaner dereferencing
+        let selected_button = selected_button.deref_mut();
 
         egui::Window::new("Char custumizar").show(egui_context.get_mut(), |ui| {
             egui::ScrollArea::both().show(ui, |ui| {
+
+                ui.label("Part to change");
+                // For some unknow reason combobox requires hash id, which I just didnt feel like writing so from empty label it is
                 egui::ComboBox::from_label("")
                     .selected_text(format!("{:?}", selected_button))
                     .show_ui(ui, |ui| {
-                        ui.selectable_value(&mut *selected_button, Parts::Head, "Head");
-                        ui.selectable_value(&mut *selected_button, Parts::Torso, "Torso");
-                        ui.selectable_value(&mut *selected_button, Parts::Legs, "Legs");
+                        ui.selectable_value(selected_button, Parts::Head, "Head");
+                        ui.selectable_value(selected_button, Parts::Torso, "Torso");
+                        ui.selectable_value(selected_button, Parts::Leg, "Leg");
                     });
-                info!("{:?}", selected_button);
+
+                ui.label("Available parts");
+                // This might be a little repeated but I think it is good it avoid annoying nested functions used only once
+                match selected_button {
+                    Parts::Head => {
+                        for path_to_part in HEAD_PATHS.iter() {
+                            if ui.button(path_to_part.to_string()).clicked() {
+                                if let Some(mut events) = world.get_resource_mut::<Events<ChangeCharEvent>>() {
+                                    events.send(ChangeCharEvent { path_to_part: path_to_part.to_string() });
+                                    info!("Change char event sent successfully! {}",path_to_part);
+                                } else {
+                                    warn!("ChangeCharEvent is not registered. Did you forget to add it with `.add_event()`?");
+                                }
+                            }
+                        }
+                    }
+                    Parts::Torso => {
+                        for path_to_part in TORSO_PATHS.iter() {
+                            if ui.button(path_to_part.to_string()).clicked() {
+                                if let Some(mut events) = world.get_resource_mut::<Events<ChangeCharEvent>>() {
+                                    events.send(ChangeCharEvent { path_to_part: path_to_part.to_string() });
+                                    info!("Change char event sent successfully! {}",path_to_part);
+                                } else {
+                                    warn!("ChangeCharEvent is not registered. Did you forget to add it with `.add_event()`?");
+                                }
+                            }
+                        }
+                    }
+                    Parts::Leg => {
+                        for path_to_part in LEG_PATHS.iter() {
+                            if ui.button(path_to_part.to_string()).clicked() {
+                                if let Some(mut events) = world.get_resource_mut::<Events<ChangeCharEvent>>() {
+                                    events.send(ChangeCharEvent { path_to_part: path_to_part.to_string() });
+                                    info!("Change char event sent successfully! {}",path_to_part);
+                                } else {
+                                    warn!("ChangeCharEvent is not registered. Did you forget to add it with `.add_event()`?");
+                                }
+                            }
+                        }
+                    }
+                }
             })
         });
     }
