@@ -1,5 +1,5 @@
+use bevy::prelude::*;
 use bevy::window::PrimaryWindow;
-use bevy::{prelude::*, utils::tracing::Event};
 use bevy_egui::{egui, EguiContext, EguiContexts, EguiSet};
 
 use crate::client::ClientAppState;
@@ -22,6 +22,14 @@ pub struct EguiWantsFocus {
     pub prev: bool,
     /// Whether egui wants focus on the current frame
     pub curr: bool,
+}
+
+#[derive(PartialEq, Debug, Default)]
+enum Parts {
+    #[default]
+    Head,
+    Torso,
+    Legs,
 }
 
 #[derive(Event, Debug)]
@@ -108,7 +116,7 @@ fn check_if_egui_wants_focus(
 }
 
 /// A developer egui utilized to limit test our game character customizer
-fn char_customizer_ui(world: &mut World) {
+fn char_customizer_ui(world: &mut World, mut selected_button: Local<Parts>) {
     if let Ok(egui_context) = world
         .query_filtered::<&mut EguiContext, With<PrimaryWindow>>()
         .get_single(world)
@@ -117,14 +125,14 @@ fn char_customizer_ui(world: &mut World) {
 
         egui::Window::new("Char custumizar").show(egui_context.get_mut(), |ui| {
             egui::ScrollArea::both().show(ui, |ui| {
-                if ui.button("Change event").clicked() {
-                    if let Some(mut event) = world.get_resource_mut::<Events<ChangeCharEvent>>() {
-                        info!("Found event {:?}", event);
-                        event.send(ChangeCharEvent);
-                    } else {
-                        warn!("Couldnt send event in egui");
-                    }
-                }
+                egui::ComboBox::from_label("")
+                    .selected_text(format!("{:?}", selected_button))
+                    .show_ui(ui, |ui| {
+                        ui.selectable_value(&mut *selected_button, Parts::Head, "Head");
+                        ui.selectable_value(&mut *selected_button, Parts::Torso, "Torso");
+                        ui.selectable_value(&mut *selected_button, Parts::Legs, "Legs");
+                    });
+                info!("{:?}", selected_button);
             })
         });
     }

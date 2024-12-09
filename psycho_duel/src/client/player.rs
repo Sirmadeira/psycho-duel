@@ -85,3 +85,6 @@ fn spawn_visual_scene(
         None
     }
 }
+
+/// Intake change char customizer info
+fn customize_predicted_player() {}
