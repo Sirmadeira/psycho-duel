@@ -3,8 +3,9 @@ use std::ops::DerefMut;
 use bevy::prelude::*;
 use bevy::window::PrimaryWindow;
 use bevy_egui::{egui, EguiContext, EguiContexts, EguiSet};
+use lightyear::prelude::*;
 
-use crate::client::ClientAppState;
+use crate::client::{ClientAppState, CoreEasyClient};
 /// Client focused egui
 pub struct ClientEguiPlugin;
 
@@ -28,8 +29,8 @@ pub struct EguiWantsFocus {
 
 /// Gives me the current parts in ui we are able to customize,utilized in combo box button
 /// Locals - Variables that are unique to a system, and only have a reference to that system.
-#[derive(PartialEq, Debug, Default)]
-enum Parts {
+#[derive(PartialEq, Debug, Default, Clone)]
+pub enum Parts {
     #[default]
     Head,
     Torso,
@@ -52,9 +53,15 @@ const LEG_PATHS: [&'static str; 2] = [
     "characters/parts/soldier_legs.glb",
 ];
 
+/// Carrier of information usefull for our char customizer
 #[derive(Event, Debug)]
 pub struct ChangeCharEvent {
-    path_to_part: String,
+    /// Client id of who asked for adjustment1
+    pub client_id: ClientId,
+    /// Body part specific part that we hope to adjust
+    pub body_part: Parts,
+    /// A file path for new part
+    pub path_to_part: String,
 }
 
 impl Plugin for ClientEguiPlugin {
@@ -98,13 +105,16 @@ fn inspector_ui(world: &mut World) {
             egui::ScrollArea::both().show(ui, |ui| {
                 ui.label("States inspector");
                 bevy_inspector_egui::bevy_inspector::ui_for_state::<ClientAppState>(world, ui);
-                // Makes dragable panel size unlimited
-                ui.allocate_space(ui.available_size());
                 // Wait for PR
                 // bevy_inspector_egui::bevy_inspector::ui_for_state::<NetworkingState>(
                 //     world, ui,
                 // );
-            })
+                ui.label("Essential resources");
+                bevy_inspector_egui::bevy_inspector::ui_for_resource::<CoreEasyClient>(world, ui);
+
+                // Makes dragable panel size unlimited
+                ui.allocate_space(ui.available_size());
+            });
         });
     } else {
         return;
@@ -148,9 +158,8 @@ fn char_customizer_ui(world: &mut World, mut selected_button: Local<Parts>) {
         // Cleaner dereferencing
         let selected_button = selected_button.deref_mut();
 
-        egui::Window::new("Char custumizar").show(egui_context.get_mut(), |ui| {
+        egui::Window::new("Char customizer").show(egui_context.get_mut(), |ui| {
             egui::ScrollArea::both().show(ui, |ui| {
-
                 ui.label("Part to change");
                 // For some unknow reason combobox requires hash id, which I just didnt feel like writing so from empty label it is
                 egui::ComboBox::from_label("")
@@ -162,46 +171,52 @@ fn char_customizer_ui(world: &mut World, mut selected_button: Local<Parts>) {
                     });
 
                 ui.label("Available parts");
-                // This might be a little repeated but I think it is good it avoid annoying nested functions used only once
-                match selected_button {
-                    Parts::Head => {
-                        for path_to_part in HEAD_PATHS.iter() {
-                            if ui.button(path_to_part.to_string()).clicked() {
-                                if let Some(mut events) = world.get_resource_mut::<Events<ChangeCharEvent>>() {
-                                    events.send(ChangeCharEvent { path_to_part: path_to_part.to_string() });
-                                    info!("Change char event sent successfully! {}",path_to_part);
-                                } else {
-                                    warn!("ChangeCharEvent is not registered. Did you forget to add it with `.add_event()`?");
-                                }
-                            }
-                        }
-                    }
-                    Parts::Torso => {
-                        for path_to_part in TORSO_PATHS.iter() {
-                            if ui.button(path_to_part.to_string()).clicked() {
-                                if let Some(mut events) = world.get_resource_mut::<Events<ChangeCharEvent>>() {
-                                    events.send(ChangeCharEvent { path_to_part: path_to_part.to_string() });
-                                    info!("Change char event sent successfully! {}",path_to_part);
-                                } else {
-                                    warn!("ChangeCharEvent is not registered. Did you forget to add it with `.add_event()`?");
-                                }
-                            }
-                        }
-                    }
-                    Parts::Leg => {
-                        for path_to_part in LEG_PATHS.iter() {
-                            if ui.button(path_to_part.to_string()).clicked() {
-                                if let Some(mut events) = world.get_resource_mut::<Events<ChangeCharEvent>>() {
-                                    events.send(ChangeCharEvent { path_to_part: path_to_part.to_string() });
-                                    info!("Change char event sent successfully! {}",path_to_part);
-                                } else {
-                                    warn!("ChangeCharEvent is not registered. Did you forget to add it with `.add_event()`?");
-                                }
-                            }
+                // Matching pattern to grab pre defined const paths
+                let paths = match selected_button {
+                    Parts::Head => &HEAD_PATHS,
+                    Parts::Torso => &TORSO_PATHS,
+                    Parts::Leg => &LEG_PATHS,
+                };
+
+                // For each part in path, we make a button  capable of sending an event with it is given file_path
+                for path_to_part in paths.iter() {
+                    // Slicing for pretty :)
+                    let sliced_str = path_to_part
+                        .split("/")
+                        .last()
+                        .unwrap_or(&path_to_part)
+                        .to_string();
+
+                    if ui.button(sliced_str).clicked() {
+                        // Grab resource easy client for client_id
+                        if let Some(client_holder) = world.get_resource::<CoreEasyClient>() {
+                            let client_id = client_holder.client_id;
+                            // Selected button is technically also the definer of what body part we want to change didnt name it differently because of egui context
+                            let body_part = selected_button.clone();
+                            send_change_event(world, body_part,path_to_part, client_id);
+                        } else {
+                            warn!("We dont expect to be able to customize character offline ! As we still need to make our save mechanic")
                         }
                     }
                 }
             })
         });
+    }
+}
+
+/// Nested function utilized to avoid repetitition
+fn send_change_event(world: &mut World, body_part: Parts, path_to_part: &str, client_id: ClientId) {
+    if let Some(mut events) = world.get_resource_mut::<Events<ChangeCharEvent>>() {
+        events.send(ChangeCharEvent {
+            client_id: client_id,
+            body_part: body_part,
+            path_to_part: path_to_part.to_string(),
+        });
+        info!(
+            "Change char event sent successfully! Part to change {} client {}",
+            path_to_part, client_id
+        );
+    } else {
+        warn!("ChangeCharEvent is not registered. Did you forget to add it with `.add_event()`?");
     }
 }

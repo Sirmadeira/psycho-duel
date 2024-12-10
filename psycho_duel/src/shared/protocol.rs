@@ -19,18 +19,16 @@ pub struct PlayerId {
 }
 
 /// Essential component utilized to tell me what exactly are
-#[derive(Component, Reflect, Serialize, Deserialize, PartialEq, Clone, InspectorOptions)]
-#[reflect(InspectorOptions)]
+#[derive(Component, Reflect, Serialize, Deserialize, PartialEq, Clone)]
 pub struct PlayerVisuals {
-    #[inspector()]
     /// Base skeleton to fit into
-    skeleton: String,
+    pub skeleton: String,
     /// Character available head
-    head: String,
+    pub head: String,
     /// Character available torso
-    torso: String,
+    pub torso: String,
     /// Character available legs
-    legs: String,
+    pub leg: String,
     /// Character available weapon
     pub weapon_1: String,
 }
@@ -40,7 +38,7 @@ impl Default for PlayerVisuals {
         Self {
             head: String::from("characters/parts/suit_head.glb"),
             torso: String::from("characters/parts/scifi_torso.glb"),
-            legs: String::from("characters/parts/witch_legs.glb"),
+            leg: String::from("characters/parts/witch_legs.glb"),
             weapon_1: String::from("weapons/katana.glb"),
             skeleton: String::from("characters/parts/main_skeleton.glb"),
         }
@@ -50,7 +48,7 @@ impl Default for PlayerVisuals {
 impl PlayerVisuals {
     // Returns an iterator over the visual components. Inclu
     pub fn iter_visuals(&self) -> impl Iterator<Item = &String> {
-        vec![&self.head, &self.torso, &self.legs, &self.skeleton].into_iter()
+        vec![&self.head, &self.torso, &self.leg, &self.skeleton].into_iter()
     }
 }
 

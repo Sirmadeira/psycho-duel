@@ -4,10 +4,11 @@ use crate::shared::*;
 use bevy::prelude::*;
 use camera::ClientCameraPlugin;
 use egui::ClientEguiPlugin;
-pub use lightyear::prelude::client::*;
+use lightyear::prelude::client::*;
 use lightyear::prelude::*;
 use player::ClientPlayerPlugin;
 use std::net::{IpAddr, Ipv4Addr, SocketAddr};
+
 /// Here we create the lightyear [`ClientPlugins`], a series of plugins responsible to setup our base client.
 fn build_client_plugin(client_id: &u64) -> ClientPlugins {
     // This is super temporary, we use this just to avoid overlapping addresses with other clients
@@ -59,6 +60,15 @@ pub enum ClientAppState {
     Game,
 }
 
+/// Although there is lightyear ClientConnection a very similar resource, he is not reflectable.
+/// This one is and also he follows the we have control guideline although he is one of the few resource, not initialized immediately.
+/// As he needs to be connected to have a client_id
+#[derive(Resource, Reflect)]
+#[reflect(Resource)]
+pub struct CoreEasyClient {
+    client_id: ClientId,
+}
+
 mod camera;
 mod egui;
 mod load_assets;
@@ -84,15 +94,32 @@ impl Plugin for CoreClientPlugin {
         app.add_plugins(ClientPlayerPlugin);
         app.add_plugins(LoadAssetsPlugin);
 
+        // Initializing center state of client
+        app.init_state::<ClientAppState>();
+
         // Add our client-specific logic. Here we will just connect to the server
         app.add_systems(OnEnter(ClientAppState::Game), connect_client);
 
-        // Initializing center state of client
-        app.init_state::<ClientAppState>();
+        // Essential systems
+        app.add_systems(Update, form_easy_client);
+
+        // Debug
+        app.register_type::<CoreEasyClient>();
     }
 }
 
 /// Connect to the server
 fn connect_client(mut commands: Commands) {
     commands.connect_client();
+}
+
+/// Forms one of the most essential resources for us a resource, that stores our client_id.
+/// Worh mentioning if for some unknow reason client id of this guy changes this guy will stand corrected
+fn form_easy_client(mut connect_event: EventReader<ConnectEvent>, mut commands: Commands) {
+    for event in connect_event.read() {
+        let client_id = event.client_id();
+        commands.insert_resource(CoreEasyClient {
+            client_id: client_id,
+        })
+    }
 }

@@ -24,7 +24,7 @@ fn inspector_ui(world: &mut World) {
         .query_filtered::<&mut EguiContext, With<PrimaryWindow>>()
         .get_single(world)
     {
-        info_once!("Manage to grab egui fromm world");
+        info_once!("Manage to grab egui from world");
 
         // We clone here to ensure the context remains concurrrently queryable I think ?
         let mut egui_context = egui_context.clone();
