@@ -97,7 +97,7 @@ impl Plugin for CoreClientPlugin {
         // Initializing center state of client
         app.init_state::<ClientAppState>();
 
-        // Add our client-specific logic. Here we will just connect to the server
+        // Add our client-specific logic. Here we will just connect to the server only when we have our assets loaded
         app.add_systems(OnEnter(ClientAppState::Game), connect_client);
 
         // Essential systems

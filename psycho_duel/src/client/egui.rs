@@ -206,8 +206,9 @@ fn char_customizer_ui(world: &mut World, mut selected_button: Local<Parts>) {
 
 /// Nested function utilized to avoid repetitition
 fn send_change_event(world: &mut World, body_part: Parts, path_to_part: &str, client_id: ClientId) {
-    if let Some(mut events) = world.get_resource_mut::<Events<ChangeCharEvent>>() {
-        events.send(ChangeCharEvent {
+    //We dont actually want event here we just wanna trigger observer
+    if let Some(_) = world.get_resource_mut::<Events<ChangeCharEvent>>() {
+        world.trigger(ChangeCharEvent {
             client_id: client_id,
             body_part: body_part,
             path_to_part: path_to_part.to_string(),
