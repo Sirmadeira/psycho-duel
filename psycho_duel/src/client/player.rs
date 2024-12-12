@@ -20,12 +20,16 @@ pub struct ClientIdPlayerMap {
 }
 
 /// A tuple map, that intakes clientid + file path string, via him we have an easy acessor that let us despawn easily our spawned scenes,
-///  when we receive the changechar event I dont want to play with lifelines in bevy it is insanely annoying that is why string
+/// when we receive the changechar event I dont want to play with lifelines in bevy it is insanely annoying that is why string
 #[derive(Resource, Default, Reflect)]
 #[reflect(Resource)]
 pub struct BodyPartMap {
     pub map: HashMap<(ClientId, String), Entity>,
 }
+
+/// Event only executed once we manage to mutate the player visual field - Wait 0.15
+// #[derive(Event)]
+// pub struct TransferAnimations;
 
 impl Plugin for ClientPlayerPlugin {
     fn build(&self, app: &mut App) {
@@ -151,71 +155,59 @@ fn customize_predicted_player(
 
     // Finding player entity via map
     if let Some(entity) = player_map.map.get(client_id) {
-        if let Some(id) =
-            spawn_visual_scene(&part_to_change, &gltf_collection, &gltfs, &mut commands)
-        {
-            info!("Going to spawn new visual scene for  {}", client_id);
-            body_part_map
-                .map
-                .insert((*client_id, part_to_change.to_string()), id);
-        }
-
         // Grab the player's current visuals mutably to update it
         let mut player_visual = player_visuals
             .get_mut(*entity)
             .expect("Player to be online and to have visual component");
 
-        // Mutate the appropriate field based on the body part
-        match body_part {
-            Parts::Head => {
-                let old_part = player_visual.head.clone();
-                player_visual.head = part_to_change.clone();
-                info!(
-                    "Changed Head part for client {:?} from '{}' to '{}'",
-                    client_id, old_part, part_to_change
-                );
-                let key = (*client_id, old_part);
-                if let Some(entity) = body_part_map.map.remove(&key) {
-                    info!("Removing old body part from entity {}", entity);
-                    commands.entity(entity).despawn_recursive();
-                }
+        // Determine the current part
+        let current_part = match body_part {
+            Parts::Head => &mut player_visual.head,
+            Parts::Torso => &mut player_visual.torso,
+            Parts::Leg => &mut player_visual.leg,
+        };
+
+        // Only proceed if the new part is different from current in player visual
+        if current_part != part_to_change {
+            info!(
+                "Changed {:?} part for client {:?} from '{}' to '{}'",
+                body_part, client_id, current_part, part_to_change
+            );
+
+            // Removing old part from the map
+            let key = (*client_id, current_part.to_string());
+            if let Some(entity) = body_part_map.map.remove(&key) {
+                info!("Removing old body part from entity {}", entity);
+                commands.entity(entity).despawn_recursive();
             }
-            Parts::Torso => {
-                let old_part = player_visual.torso.clone();
-                player_visual.torso = part_to_change.clone();
-                info!(
-                    "Changed Torso part for client {:?} from '{}' to '{}'",
-                    client_id, old_part, part_to_change
-                );
-                let key = (*client_id, old_part);
-                if let Some(entity) = body_part_map.map.remove(&key) {
-                    info!("Removing old body part from entity {}", entity);
-                    commands.entity(entity).despawn_recursive();
-                }
+
+            // Spawn new visual scene and insert into the map
+            if let Some(id) =
+                spawn_visual_scene(&part_to_change, &gltf_collection, &gltfs, &mut commands)
+            {
+                info!("Spawning new visual scene for {}", client_id);
+                body_part_map
+                    .map
+                    .insert((*client_id, part_to_change.to_string()), id);
+
+                // Mutating player visuals do this after every validation has been passed
+                *current_part = part_to_change.clone();
+                // Make player parent of the new spawned scene
+                commands.entity(id).set_parent(*entity);
             }
-            Parts::Leg => {
-                let old_part = player_visual.leg.clone();
-                player_visual.leg = part_to_change.clone();
-                info!(
-                    "Changed Leg part for client {:?} from '{}' to '{}'",
-                    client_id, old_part, part_to_change
-                );
-                let key = (*client_id, old_part);
-                if let Some(entity) = body_part_map.map.remove(&key) {
-                    info!("Removing old body part from entity {}", entity);
-                    commands.entity(entity).despawn_recursive();
-                }
-            }
+        } else {
+            info!(
+                "Part '{}' for client {} is already current; no changes made",
+                part_to_change, client_id
+            );
         }
     } else {
         warn!(
-            "Something went terrbly wrong couldnt find client_id {} player entity",
+            "Something went terribly wrong; couldn't find client_id {} player entity",
             client_id
         )
     }
 }
-
-fn spawn_customize_scene() {}
 
 /// TODO - Observer system check if player visuals changed in client if so tell server to adjust in all
 fn notify_server_of_visual_change() {}

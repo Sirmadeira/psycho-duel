@@ -1,12 +1,11 @@
 use crate::shared::ClientId;
 use bevy::prelude::*;
-use bevy_inspector_egui::prelude::ReflectInspectorOptions;
-use bevy_inspector_egui::InspectorOptions;
 use lightyear::prelude::client::ComponentSyncMode;
 use lightyear::prelude::AppComponentExt;
 use lightyear::prelude::ChannelDirection;
 use serde::Deserialize;
 use serde::Serialize;
+
 /// Essential struct that marks our player predicted entity.
 #[derive(Component, Reflect, Serialize, Deserialize, PartialEq, Clone)]
 pub struct PlayerMarker;

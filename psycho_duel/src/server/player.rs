@@ -17,6 +17,8 @@ pub struct ServerClientIdPlayerMap {
     map: HashMap<ClientId, Entity>,
 }
 
+
+
 /// Whenever a player connects spawn player entity
 fn spawn_player_when_connects(
     mut connections: EventReader<ConnectEvent>,

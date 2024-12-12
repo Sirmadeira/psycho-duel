@@ -17,6 +17,8 @@ The project is divided into three core sub-plugins:
 3. **`shared`**  
    Contains shared resources, utilities, and logic that are reused between `server` and `client`. It ensures DRY (Don't Repeat Yourself) principles are followed and provides a centralized location for common functionality.
 
+
+
 ---
 
 ## Key Guidelines
@@ -48,7 +50,7 @@ The project is divided into three core sub-plugins:
 - But hell man name them Marker something so everybody knows it is a marker, sometime we be tripping you get it dont you? thanks!
 
 ## 7. **Want assets? Asset loader is for you**
-- So is very simple, just check load_assets file in client, wanna load assets do it via bevy asset loader, he can make maps vectors whatever you want for you.
+- So is very simple, just check load_assets file in client, wanna load assets do it via bevy asset loader, he can make maps, vectors whatever you want for you.
 - He also makes loading states which are extremely usefull. He avoid so much codey i love him.
 
 ## 8. **Control is everything**
@@ -56,6 +58,7 @@ The project is divided into three core sub-plugins:
 - Example: We have character controller in rapier right? Well that thing is good if this was an alpha which it isnt we must be able to CONTROL everything.
 - Other example: Lightyear makes spawning and despawning character session based, of course this avoids usage of code. But it takes our ability to control AFK status.
 
-
+## 9. **Always save**
+- Simple, you changed one of the saved resources. FUCKING SAVE IT ON THE SAME FUNCTION!
 
 ---

@@ -3,9 +3,39 @@ use bevy::prelude::*;
 use lightyear::prelude::server::*;
 use lightyear::prelude::*;
 use player::ServerPlayerPlugin;
+use save::SavePlugin;
 use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 
 pub const SERVER_ADDR: SocketAddr = SocketAddr::new(IpAddr::V4(Ipv4Addr::LOCALHOST), 5000);
+
+/// Centralization plugin - When we pass in the cli the arg "server" this guy runs
+pub struct CoreServerPlugin;
+
+mod player;
+mod save;
+
+impl Plugin for CoreServerPlugin {
+    fn build(&self, app: &mut App) {
+        // Different from client server doesnt require a lot of things, we usually shouldnt have a screen or render anything on him.
+        // But as we are in development stage we gonna live it the default ones
+        app.add_plugins(DefaultPlugins.set(bevy::log::LogPlugin {
+            level: bevy::log::Level::INFO,
+            ..default()
+        }));
+        // Add lightyear plugins
+        app.add_plugins(build_server_plugin());
+
+        // Add our shared plugin containing the protocol + other shared behaviour
+        app.add_plugins(CoreSharedPlugin);
+
+        // Add our server-specific logic. Here we will just start listening for incoming connections
+        app.add_systems(Startup, start_server);
+
+        // Adding our self-made plugins
+        app.add_plugins(ServerPlayerPlugin);
+        app.add_plugins(SavePlugin);
+    }
+}
 
 /// Here we create the lightyear [`ServerPlugins`], a series of system responsible for setuping the logic of our server
 /// It is replication interval, if he shall have input delay, and other similar aspects.
@@ -36,33 +66,6 @@ fn build_server_plugin() -> ServerPlugins {
         ..default()
     };
     ServerPlugins::new(config)
-}
-
-/// Centralization plugin - When we pass in the cli the arg "server" this guy runs
-pub struct CoreServerPlugin;
-
-mod player;
-
-impl Plugin for CoreServerPlugin {
-    fn build(&self, app: &mut App) {
-        // Different from client server doesnt require a lot of things, we usually shouldnt have a screen or render anything on him.
-        // But as we are in development stage we gonna live it the default ones
-        app.add_plugins(DefaultPlugins.set(bevy::log::LogPlugin {
-            level: bevy::log::Level::INFO,
-            ..default()
-        }));
-        // Add lightyear plugins
-        app.add_plugins(build_server_plugin());
-
-        // Add our shared plugin containing the protocol + other shared behaviour
-        app.add_plugins(CoreSharedPlugin);
-
-        // Add our server-specific logic. Here we will just start listening for incoming connections
-        app.add_systems(Startup, start_server);
-
-        // Adding our self-made plugins
-        app.add_plugins(ServerPlayerPlugin);
-    }
 }
 
 /// Start the server

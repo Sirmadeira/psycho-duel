@@ -9,40 +9,6 @@ use lightyear::prelude::*;
 use player::ClientPlayerPlugin;
 use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 
-/// Here we create the lightyear [`ClientPlugins`], a series of plugins responsible to setup our base client.
-fn build_client_plugin(client_id: &u64) -> ClientPlugins {
-    // This is super temporary, we use this just to avoid overlapping addresses with other clients
-    let client_addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, *client_id as u8)), 4000);
-
-    // The NetConfig specifies how we establish a connection with the server.
-    let net_config = NetConfig::Netcode {
-        // Authentication is where you specify how the client should connect to the server
-        // This is where you provide the server address
-        auth: Authentication::Manual {
-            server_addr: SERVER_ADDR,
-            client_id: *client_id,
-            private_key: Key::default(),
-            protocol_id: 0,
-        },
-        // The IoConfig will specify the transport to use.
-        io: IoConfig {
-            // the address specified here is the client_address, because we open a UDP socket on the client
-            transport: ClientTransport::UdpSocket(client_addr),
-            ..default()
-        },
-        // We can use either Steam (in which case we will use steam sockets and there is no need to specify
-        // our own io) or Netcode (in which case we need to specify our own io).
-        config: NetcodeConfig::default(),
-    };
-    let config = ClientConfig {
-        // part of the config needs to be shared between the client and server
-        shared: shared_config(),
-        net: net_config,
-        ..default()
-    };
-    ClientPlugins::new(config)
-}
-
 /// Centralization plugin - When we pass in the cli the arg "client" this guy runs
 pub struct CoreClientPlugin {
     /// This is one of the only few plugins that actually require an argument
@@ -106,6 +72,40 @@ impl Plugin for CoreClientPlugin {
         // Debug
         app.register_type::<CoreEasyClient>();
     }
+}
+
+/// Here we create the lightyear [`ClientPlugins`], a series of plugins responsible to setup our base client.
+fn build_client_plugin(client_id: &u64) -> ClientPlugins {
+    // This is super temporary, we use this just to avoid overlapping addresses with other clients
+    let client_addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, *client_id as u8)), 4000);
+
+    // The NetConfig specifies how we establish a connection with the server.
+    let net_config = NetConfig::Netcode {
+        // Authentication is where you specify how the client should connect to the server
+        // This is where you provide the server address
+        auth: Authentication::Manual {
+            server_addr: SERVER_ADDR,
+            client_id: *client_id,
+            private_key: Key::default(),
+            protocol_id: 0,
+        },
+        // The IoConfig will specify the transport to use.
+        io: IoConfig {
+            // the address specified here is the client_address, because we open a UDP socket on the client
+            transport: ClientTransport::UdpSocket(client_addr),
+            ..default()
+        },
+        // We can use either Steam (in which case we will use steam sockets and there is no need to specify
+        // our own io) or Netcode (in which case we need to specify our own io).
+        config: NetcodeConfig::default(),
+    };
+    let config = ClientConfig {
+        // part of the config needs to be shared between the client and server
+        shared: shared_config(),
+        net: net_config,
+        ..default()
+    };
+    ClientPlugins::new(config)
 }
 
 /// Connect to the server
