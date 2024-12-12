@@ -1,0 +1,6 @@
+[book]
+authors = ["Sirmadeira"]
+language = "en"
+multilingual = false
+src = "src"
+title = "The project"
