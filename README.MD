@@ -61,4 +61,7 @@ The project is divided into three core sub-plugins:
 ## 9. **Always save**
 - Simple, you changed one of the saved resources. FUCKING SAVE IT ON THE SAME FUNCTION!
 
+## 10 **CORE**
+- The keyword core means essential so essential that dont fuck with it, if you make a core mechanic, example: Saving. Add core keyword for those structs
+
 ---

@@ -7,6 +7,7 @@ use egui::ClientEguiPlugin;
 use lightyear::prelude::client::*;
 use lightyear::prelude::*;
 use player::ClientPlayerPlugin;
+use protocol::CoreSaveInfoMap;
 use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 
 /// Centralization plugin - When we pass in the cli the arg "client" this guy runs
@@ -63,10 +64,13 @@ impl Plugin for CoreClientPlugin {
         // Initializing center state of client
         app.init_state::<ClientAppState>();
 
+        // Initialiazing core resources and replicated ones
+        app.init_resource::<CoreSaveInfoMap>();
+
         // Add our client-specific logic. Here we will just connect to the server only when we have our assets loaded
         app.add_systems(OnEnter(ClientAppState::Game), connect_client);
 
-        // Essential systems
+        // Essential systems- Run in update because as reconnects may occur client id may vary, only prod tho.
         app.add_systems(Update, form_easy_client);
 
         // Debug

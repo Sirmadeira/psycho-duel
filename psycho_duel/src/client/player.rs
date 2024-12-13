@@ -1,14 +1,15 @@
 use super::{
     egui::ChangeCharEvent,
     load_assets::GltfCollection,
-    protocol::{PlayerId, PlayerMarker, PlayerVisuals},
+    protocol::{PlayerId, PlayerMarker, PlayerVisuals, SaveVisual},
     ClientAppState,
 };
 use crate::client::egui::Parts;
+use crate::shared::CommonChannel;
 use bevy::{prelude::*, utils::HashMap};
+use lightyear::client::components::Confirmed;
 use lightyear::client::prediction::Predicted;
 use lightyear::prelude::*;
-
 /// Centralization plugin - Everything correlated to player shall be inserted here
 pub struct ClientPlayerPlugin;
 
@@ -209,5 +210,19 @@ fn customize_predicted_player(
     }
 }
 
-/// TODO - Observer system check if player visuals changed in client if so tell server to adjust in all
-fn notify_server_of_visual_change() {}
+// /// This should only occur once everything is correct in client
+// fn notify_server_of_visual_change(
+//     player_comp: Query<&PlayerVisuals, Changed<PlayerVisuals>>,
+//     mut connection_manager: ResMut<ClientConnectionManager>,
+// ) {
+//     for player_visuals in player_comp.iter() {
+//         if connection_manager
+//             .send_message::<CommonChannel, SaveVisual>(&mut SaveVisual {
+//                 loaded_visuals: player_visuals.clone(),
+//             })
+//             .is_err()
+//         {
+//             warn!("Failed to send visual customization message to the server");
+//         }
+//     }
+// }

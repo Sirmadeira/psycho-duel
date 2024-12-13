@@ -1,11 +1,11 @@
-use std::ops::DerefMut;
+use std::{hash::Hash, ops::DerefMut};
 
 use bevy::prelude::*;
 use bevy::window::PrimaryWindow;
 use bevy_egui::{egui, EguiContext, EguiContexts, EguiSet};
 use lightyear::prelude::*;
 
-use crate::client::{ClientAppState, CoreEasyClient};
+use crate::client::{protocol::CoreSaveInfoMap, ClientAppState, CoreEasyClient};
 /// Client focused egui
 pub struct ClientEguiPlugin;
 
@@ -104,13 +104,27 @@ fn inspector_ui(world: &mut World) {
             ui.heading("Client debugging");
             egui::ScrollArea::both().show(ui, |ui| {
                 ui.label("States inspector");
+                // Creates an empty space
+                ui.add_space(10.0);
                 bevy_inspector_egui::bevy_inspector::ui_for_state::<ClientAppState>(world, ui);
                 // Wait for PR
                 // bevy_inspector_egui::bevy_inspector::ui_for_state::<NetworkingState>(
                 //     world, ui,
                 // );
-                ui.label("Essential resources");
-                bevy_inspector_egui::bevy_inspector::ui_for_resource::<CoreEasyClient>(world, ui);
+
+                ui.heading("Additional Resources");
+                ui.add_space(10.0);
+                // Creates a little division strand
+                ui.separator();
+                // Here we are using this little ui_push id to avoid same widget id for both of them FIX - Little red warning hehe
+                ui.push_id("core_easy_client", |ui| {
+                    ui.add(egui::Label::new(
+                        egui::RichText::new("Your Client").size(14.0),
+                    ));
+                    bevy_inspector_egui::bevy_inspector::ui_for_resource::<CoreEasyClient>(
+                        world, ui,
+                    );
+                });
 
                 // Makes dragable panel size unlimited
                 ui.allocate_space(ui.available_size());
