@@ -15,11 +15,15 @@ pub struct MarkerPrimaryCamera;
 /// Essential struct that sets  a series of possible variable we can play with to make our camera more adjustable
 #[derive(Reflect, Component, Debug)]
 pub struct CamInfo {
+    /// How strong mouse will affect orbit camera
     pub mouse_sens: f32,
+    /// True = On, False = Off
     pub zoom_enabled: bool,
     pub zoom: Zoom,
     pub zoom_sens: f32,
+    /// Limits how much we can shift horizonatally
     pub yaw_limit: Option<(f32, f32)>,
+    /// Limits how much we can shift vertically
     pub pitch_limit: Option<(f32, f32)>,
 }
 
@@ -66,6 +70,7 @@ impl Plugin for ClientCameraPlugin {
         );
         // Debug for leafwing
         app.register_type::<InputMap<CameraMovement>>();
+        app.register_type::<CamInfo>();
     }
 }
 

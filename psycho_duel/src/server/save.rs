@@ -3,9 +3,12 @@ use crate::shared::protocol::CoreSaveInfoMap;
 use bevy::prelude::*;
 use bincode::{deserialize_from, serialize_into};
 use lightyear::prelude::*;
+use lightyear::server::events::MessageEvent;
 use std::fs::File;
 use std::io::{BufReader, BufWriter, ErrorKind};
 
+use super::player::ServerClientIdPlayerMap;
+use super::protocol::{PlayerVisuals, SaveMessage};
 use super::CommonChannel;
 
 /// Plugin utilized to store specific username info, for example: What visuals he currently has? What itens he bought? The list goes on
@@ -27,6 +30,9 @@ impl Plugin for SavePlugin {
 
         // Update because we want to keep listening to it
         app.add_systems(Update, handle_new_clients);
+
+        // Update because it listens to client messages
+        app.add_systems(Update, check_client_sent_core_information);
     }
 }
 
@@ -35,6 +41,7 @@ fn replicate_resource(mut commands: Commands) {
     commands.replicate_resource::<CoreSaveInfoMap, CommonChannel>(NetworkTarget::All);
 }
 
+/// Evaluates if it is a new client or someone who has already logged in
 fn handle_new_clients(
     mut save_info: ResMut<CoreSaveInfoMap>,
     mut connections: EventReader<ServerConnectEvent>,
@@ -61,11 +68,10 @@ fn handle_new_clients(
         }
     }
 }
-
 /// A simple function that save in bincode files the adjusted resources CoreSaveInfoMap. Should occur everytime we modify that core resource in code,
 /// Example: User modifies current skin, save!
 fn save(save_info: CoreSaveInfoMap) {
-    info!("Saving new file!");
+    info!("Saving new information!");
     // Unwraps here because I dont see how one would be able to just change a const or a already initialized struct field type
     let mut f = BufWriter::new(File::create(SAVE_FILE_PATH).unwrap());
     let save_info_map = save_info;
@@ -103,6 +109,36 @@ fn create_or_read_save_file(mut commands: Commands) {
         }
         Err(err) => {
             panic!("Failed to open save file for an unexpected reason: {}", err);
+        }
+    }
+}
+
+/// This guy is gonna receive the sent save messages from client, and check if such action can be or not executed
+/// If not, he is not gonna update confirmed after that client validates_predicted_confirmed should act accordingly to the mechanic
+fn check_client_sent_core_information(
+    mut save_from_client: EventReader<MessageEvent<SaveMessage>>,
+    mut core_info_map: ResMut<CoreSaveInfoMap>,
+    player_map: Res<ServerClientIdPlayerMap>,
+    mut player_visual: Query<&mut PlayerVisuals>,
+) {
+    for save_message in save_from_client.read() {
+        let message = save_message.message().clone();
+        let save_info = message.save_info;
+        let client_id = save_info.player_id.id;
+
+        // Validation stage - Here we are supposed to check if things can or not occur. Right now we do nothing :>
+
+        // After validation is okayed update core info map, save it  and align confirmed to predicted.
+        if let Some(_) = core_info_map.map.remove(&client_id) {
+            core_info_map.map.insert(client_id, save_info.clone());
+            if let Some(player_entity) = player_map.map.get(&client_id) {
+                let mut server_visual = player_visual.get_mut(*player_entity).unwrap();
+                *server_visual = save_info.player_visuals;
+                // Only save if updated visuals on confirmed
+                save(core_info_map.clone());
+            } else {
+                warn!("Didndt manage to update visuals in confirmed entity!So not saving new core info map")
+            }
         }
     }
 }

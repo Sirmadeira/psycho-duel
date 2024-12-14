@@ -13,7 +13,7 @@ use super::protocol::{CoreInformation, PlayerMarker};
 #[derive(Resource, Default, Reflect)]
 #[reflect(Resource)]
 pub struct ServerClientIdPlayerMap {
-    map: HashMap<ClientId, Entity>,
+    pub map: HashMap<ClientId, Entity>,
 }
 
 /// Centralization plugin - Utilized for player related logic

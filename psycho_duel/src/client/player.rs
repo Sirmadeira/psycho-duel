@@ -193,8 +193,9 @@ fn customize_predicted_player(
                 // Make player parent of the new spawned scene
                 commands.entity(id).set_parent(*entity);
 
+                // TODO - Capture event in server, and homolog it
                 if connection_manager
-                    .send_message::<CommonChannel, Save>(&mut Save {
+                    .send_message::<CommonChannel, SaveMessage>(&mut SaveMessage {
                         save_info: CoreInformation::total_new(*client_id, player_visual.clone()),
                     })
                     .is_err()

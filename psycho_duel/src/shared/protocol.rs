@@ -51,7 +51,7 @@ impl PlayerVisuals {
     pub fn iter_visuals(&self) -> impl Iterator<Item = &String> {
         vec![&self.head, &self.torso, &self.leg, &self.skeleton].into_iter()
     }
-    /// Returns a reference to the visual component corresponding to the given reference to`Parts` .
+    /// Returns a reference to the visual component corresponding to the given`Parts` enum
     /// Avoids the usage of uncessary match statements
     pub fn get_visual(&self, part: &Parts) -> &String {
         match part {
@@ -93,7 +93,7 @@ impl CoreInformation {
             player_visuals: PlayerVisuals::default(),
         }
     }
-    // Pass a client id + current player visual
+    // Pass a client id + current player visual, get a totally new core information
     pub fn total_new(client_id: ClientId, player_visuals: PlayerVisuals) -> Self {
         Self {
             player_id: PlayerId { id: client_id },
@@ -104,7 +104,7 @@ impl CoreInformation {
 
 /// An event message sent by client to server that gives the player currently chosen loadout
 #[derive(Serialize, Deserialize, Clone, PartialEq)]
-pub struct Save {
+pub struct SaveMessage {
     pub save_info: CoreInformation,
 }
 
@@ -139,7 +139,8 @@ impl Plugin for ProtocolPlugin {
         // Self-made messages - The workflow for messages is as follows:
         // -> First register message
         // -> Send her via clientconnectionmessager using send_message function with all of it is shenanigans
-        app.register_message::<Save>(ChannelDirection::ClientToServer);
+        // -> Read it via EventReader<MessageEvent<>>
+        app.register_message::<SaveMessage>(ChannelDirection::ClientToServer);
 
         // Debug registering
         app.register_type::<PlayerId>();
