@@ -1,13 +1,12 @@
 use super::{
     egui::ChangeCharEvent,
     load_assets::GltfCollection,
-    protocol::{PlayerId, PlayerMarker, PlayerVisuals, SaveVisual},
+    protocol::{PlayerId, PlayerMarker, PlayerVisuals},
     ClientAppState,
 };
-use crate::client::egui::Parts;
+use crate::shared::protocol::*;
 use crate::shared::CommonChannel;
 use bevy::{prelude::*, utils::HashMap};
-use lightyear::client::components::Confirmed;
 use lightyear::client::prediction::Predicted;
 use lightyear::prelude::*;
 /// Centralization plugin - Everything correlated to player shall be inserted here
@@ -146,6 +145,7 @@ fn customize_predicted_player(
     mut body_part_map: ResMut<BodyPartMap>,
     gltf_collection: Res<GltfCollection>,
     gltfs: Res<Assets<Gltf>>,
+    mut connection_manager: ResMut<ClientConnectionManager>,
     mut commands: Commands,
 ) {
     let event = change_char.event();
@@ -156,17 +156,13 @@ fn customize_predicted_player(
 
     // Finding player entity via map
     if let Some(entity) = player_map.map.get(client_id) {
-        // Grab the player's current visuals mutably to update it
+        // Grab the player's current visuals not mutably server needs to validate
         let mut player_visual = player_visuals
             .get_mut(*entity)
             .expect("Player to be online and to have visual component");
 
         // Determine the current part
-        let current_part = match body_part {
-            Parts::Head => &mut player_visual.head,
-            Parts::Torso => &mut player_visual.torso,
-            Parts::Leg => &mut player_visual.leg,
-        };
+        let current_part = player_visual.get_visual_mut(body_part);
 
         // Only proceed if the new part is different from current in player visual
         if current_part != part_to_change {
@@ -191,10 +187,20 @@ fn customize_predicted_player(
                     .map
                     .insert((*client_id, part_to_change.to_string()), id);
 
-                // Mutating player visuals do this after every validation has been passed
+                // // Mutating player visuals do this after every validation has been passed
                 *current_part = part_to_change.clone();
+
                 // Make player parent of the new spawned scene
                 commands.entity(id).set_parent(*entity);
+
+                if connection_manager
+                    .send_message::<CommonChannel, Save>(&mut Save {
+                        save_info: CoreInformation::total_new(*client_id, player_visual.clone()),
+                    })
+                    .is_err()
+                {
+                    warn!("Failed to send save to server!")
+                }
             }
         } else {
             info!(

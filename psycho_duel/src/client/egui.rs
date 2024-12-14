@@ -1,11 +1,11 @@
-use std::{hash::Hash, ops::DerefMut};
+use std::ops::DerefMut;
 
 use bevy::prelude::*;
 use bevy::window::PrimaryWindow;
 use bevy_egui::{egui, EguiContext, EguiContexts, EguiSet};
 use lightyear::prelude::*;
 
-use crate::client::{protocol::CoreSaveInfoMap, ClientAppState, CoreEasyClient};
+use crate::client::{ClientAppState, CoreEasyClient};
 /// Client focused egui
 pub struct ClientEguiPlugin;
 

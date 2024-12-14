@@ -6,7 +6,7 @@ use lightyear::prelude::server::{ControlledBy, Lifetime, Replicate, SyncTarget};
 use lightyear::prelude::*;
 use lightyear::server::events::DisconnectEvent;
 
-use super::protocol::{CoreInformation, PlayerMarker, PlayerVisuals};
+use super::protocol::{CoreInformation, PlayerMarker};
 
 /// Simple map - That points out the player entity with that given id
 /// Pass a client_id get it is server player entity

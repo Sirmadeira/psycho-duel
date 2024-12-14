@@ -1,3 +1,4 @@
+use crate::client::egui::Parts;
 use crate::shared::ClientId;
 use bevy::prelude::*;
 use bevy::utils::HashMap;
@@ -5,7 +6,6 @@ use lightyear::prelude::client::ComponentSyncMode;
 use lightyear::prelude::*;
 use serde::Deserialize;
 use serde::Serialize;
-
 /// Essential struct that marks our player predicted entity.
 #[derive(Component, Reflect, Serialize, Deserialize, PartialEq, Clone)]
 pub struct PlayerMarker;
@@ -51,6 +51,22 @@ impl PlayerVisuals {
     pub fn iter_visuals(&self) -> impl Iterator<Item = &String> {
         vec![&self.head, &self.torso, &self.leg, &self.skeleton].into_iter()
     }
+    /// Returns a reference to the visual component corresponding to the given reference to`Parts` .
+    /// Avoids the usage of uncessary match statements
+    pub fn get_visual(&self, part: &Parts) -> &String {
+        match part {
+            Parts::Head => &self.head,
+            Parts::Torso => &self.torso,
+            Parts::Leg => &self.leg,
+        }
+    }
+    pub fn get_visual_mut(&mut self, part: &Parts) -> &mut String {
+        match part {
+            Parts::Head => &mut self.head,
+            Parts::Torso => &mut self.torso,
+            Parts::Leg => &mut self.leg,
+        }
+    }
 }
 
 /// Our save resource map, it is gonna store all types of core information really important for our mechanics.
@@ -77,12 +93,19 @@ impl CoreInformation {
             player_visuals: PlayerVisuals::default(),
         }
     }
+    // Pass a client id + current player visual
+    pub fn total_new(client_id: ClientId, player_visuals: PlayerVisuals) -> Self {
+        Self {
+            player_id: PlayerId { id: client_id },
+            player_visuals: player_visuals,
+        }
+    }
 }
 
 /// An event message sent by client to server that gives the player currently chosen loadout
 #[derive(Serialize, Deserialize, Clone, PartialEq)]
-pub struct SaveVisual {
-    pub loaded_visuals: PlayerVisuals,
+pub struct Save {
+    pub save_info: CoreInformation,
 }
 
 /// Centralization plugin - Defines how our component will be synced (from server to client or client to server or bidirectional)
@@ -116,7 +139,7 @@ impl Plugin for ProtocolPlugin {
         // Self-made messages - The workflow for messages is as follows:
         // -> First register message
         // -> Send her via clientconnectionmessager using send_message function with all of it is shenanigans
-        app.register_message::<SaveVisual>(ChannelDirection::ClientToServer);
+        app.register_message::<Save>(ChannelDirection::ClientToServer);
 
         // Debug registering
         app.register_type::<PlayerId>();

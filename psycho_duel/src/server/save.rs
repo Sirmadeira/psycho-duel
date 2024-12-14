@@ -51,10 +51,11 @@ fn handle_new_clients(
             commands.spawn(core_information.clone());
         } else {
             info!("New player logging in");
-            // Handle a new client by creating a default core information
+            // Handle a new client by creating a default core information and insert him into map
             let core_information = CoreInformation::new(client_id);
             commands.spawn(core_information.clone());
             save_info.map.insert(client_id, core_information);
+
             // We use clone here because ideally we want snaps of our save files also to keep running this in parallel with futures saves
             save(save_info.clone());
         }
