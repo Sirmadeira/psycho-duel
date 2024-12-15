@@ -4,7 +4,6 @@ use bevy::prelude::*;
 use bincode::{deserialize_from, serialize_into};
 use lightyear::prelude::*;
 use lightyear::server::events::MessageEvent;
-use lightyear::shared::ping::message;
 use std::fs::File;
 use std::io::{BufReader, BufWriter, ErrorKind};
 

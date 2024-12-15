@@ -2,30 +2,12 @@ use std::ops::DerefMut;
 
 use bevy::prelude::*;
 use bevy::window::PrimaryWindow;
-use bevy_egui::{egui, EguiContext, EguiContexts, EguiSet};
+use bevy_egui::{egui, EguiContext};
 use lightyear::prelude::*;
 
 use crate::client::{ClientAppState, CoreEasyClient};
 /// Client focused egui
 pub struct ClientEguiPlugin;
-
-/// A resource that tracks whether egui wants focus on the current and previous frames,
-///
-/// The reason the previous frame's value is saved is because when you click inside an
-/// egui window, Context::wants_pointer_input() still returns false once before returning
-/// true. If the camera stops taking input only when it returns false, there's one frame
-/// where both egui and the camera are using the input events, which is not desirable.
-///
-/// This is re-exported in case it's useful. I recommend only using input events if both
-/// `prev` and `curr` are false.
-#[derive(Resource, PartialEq, Eq, Default, Reflect, Debug)]
-#[reflect(Resource)]
-pub struct EguiWantsFocus {
-    /// Whether egui wanted focus on the previous frame
-    pub prev: bool,
-    /// Whether egui wants focus on the current frame
-    pub curr: bool,
-}
 
 /// Gives me the current parts in ui we are able to customize,utilized in combo box button
 /// Locals - Variables that are unique to a system, and only have a reference to that system.
@@ -66,23 +48,11 @@ pub struct ChangeCharEvent {
 
 impl Plugin for ClientEguiPlugin {
     fn build(&self, app: &mut App) {
-        //Resouce registration
-        app.init_resource::<EguiWantsFocus>();
         //Events
         app.add_event::<ChangeCharEvent>();
 
         //In update by default
         app.add_systems(Update, (inspector_ui, char_customizer_ui));
-
-        // In post update to ensure that in preupdate we have the correct prev and curr value
-        // After init contexts because we expect the Egui to exist.
-        app.add_systems(
-            PostUpdate,
-            check_if_egui_wants_focus.after(EguiSet::InitContexts),
-        );
-
-        // Debugging
-        app.register_type::<EguiWantsFocus>();
     }
 }
 
@@ -135,31 +105,6 @@ fn inspector_ui(world: &mut World) {
     } else {
         return;
     };
-}
-
-fn check_if_egui_wants_focus(
-    mut contexts: EguiContexts,
-    windows: Query<Entity, With<Window>>,
-    mut wants_focus: ResMut<EguiWantsFocus>,
-) {
-    // The window that the user is interacting with and the window that contains the egui context are almost always the same. Therefore, we can assume
-    // that if any of the egui contexts want focus, then it must be the one that the user is interacting with.
-    let new_wants_focus = windows.iter().any(|window| {
-        if let Some(ctx) = contexts.try_ctx_for_entity_mut(window) {
-            // Check if wants pointer input or keyboard input
-            let value = ctx.wants_pointer_input() || ctx.wants_keyboard_input();
-            value
-        } else {
-            false
-        }
-    });
-
-    let new_res = EguiWantsFocus {
-        prev: wants_focus.curr,
-        curr: new_wants_focus,
-    };
-    // info!("New res {:?}", new_res);
-    wants_focus.set_if_neq(new_res);
 }
 
 /// A developer egui utilized to limit test our game character customizer
