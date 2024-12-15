@@ -4,6 +4,7 @@ use bevy::prelude::*;
 use bincode::{deserialize_from, serialize_into};
 use lightyear::prelude::*;
 use lightyear::server::events::MessageEvent;
+use lightyear::shared::ping::message;
 use std::fs::File;
 use std::io::{BufReader, BufWriter, ErrorKind};
 
@@ -120,25 +121,49 @@ fn check_client_sent_core_information(
     mut core_info_map: ResMut<CoreSaveInfoMap>,
     player_map: Res<ServerClientIdPlayerMap>,
     mut player_visual: Query<&mut PlayerVisuals>,
+    mut connection_manager: ResMut<ServerConnectionManager>,
 ) {
     for save_message in save_from_client.read() {
-        let message = save_message.message().clone();
-        let save_info = message.save_info;
+        let mut message = save_message.message().clone();
+        let save_info = &message.save_info;
         let client_id = save_info.player_id.id;
 
-        // Validation stage - Here we are supposed to check if things can or not occur. Right now we do nothing :>
+        // Validation stage
+        if let Some(visual_change) = &message.change_char {
+            // Perform any validation logic here
+            info!("Validation for visual change: {:?}", visual_change);
+        }
 
-        // After validation is okayed update core info map, save it  and align confirmed to predicted.
-        if let Some(_) = core_info_map.map.remove(&client_id) {
+        // Update core info map and apply visual updates if validation passes
+        if core_info_map.map.remove(&client_id).is_some() {
             core_info_map.map.insert(client_id, save_info.clone());
+
             if let Some(player_entity) = player_map.map.get(&client_id) {
+                // Adjusting confirmed entities
                 let mut server_visual = player_visual.get_mut(*player_entity).unwrap();
-                *server_visual = save_info.player_visuals;
-                // Only save if updated visuals on confirmed
+                *server_visual = save_info.player_visuals.clone();
+
+                // Save updated core info map
                 save(core_info_map.clone());
+
+                // Broadcast updated visuals to all clients
+                if connection_manager
+                    .send_message_to_target::<CommonChannel, SaveMessage>(
+                        &mut message,
+                        NetworkTarget::All,
+                    )
+                    .is_err()
+                {
+                    warn!("Even tho server gave the okay couldnt broadcast message to all clients!")
+                }
             } else {
-                warn!("Didndt manage to update visuals in confirmed entity!So not saving new core info map")
+                warn!(
+                    "Could not find player entity for client_id: {}. Core info map not saved.",
+                    client_id
+                );
             }
+        } else {
+            warn!("No existing core info found for client_id: {}.", client_id);
         }
     }
 }

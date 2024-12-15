@@ -50,7 +50,7 @@ fn spawn_player_when_core(
     }
 }
 
-/// Nested function - Responsible for adding additional non
+/// Callable function - Responsible for adding additional non optional player fields into core entity
 fn formulates_player(client_id: &ClientId, entity: Entity, commands: &mut Commands) -> Entity {
     // Okay here is a quick explanation of this guy - He
     let replicate = Replicate {

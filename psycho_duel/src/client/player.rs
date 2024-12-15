@@ -1,5 +1,5 @@
 use super::{
-    egui::ChangeCharEvent,
+    egui::{ChangeCharEvent, Parts},
     load_assets::GltfCollection,
     protocol::{PlayerId, PlayerMarker, PlayerVisuals},
     ClientAppState,
@@ -7,12 +7,13 @@ use super::{
 use crate::shared::protocol::*;
 use crate::shared::CommonChannel;
 use bevy::{prelude::*, utils::HashMap};
-use lightyear::client::prediction::Predicted;
 use lightyear::prelude::*;
+use lightyear::{client::prediction::Predicted, shared::events::components::MessageEvent};
 /// Centralization plugin - Everything correlated to player shall be inserted here
 pub struct ClientPlayerPlugin;
 
-/// Essential plugin to be able to find player entity via client_id, really usefull for event consumption
+/// Essential plugin to be able to find player predicted entity via client_id, really usefull for event consumption
+/// And to grab easily your predicted player
 #[derive(Resource, Reflect, Default)]
 #[reflect(Resource)]
 pub struct ClientIdPlayerMap {
@@ -43,8 +44,11 @@ impl Plugin for ClientPlayerPlugin {
             (fill_client_id_map, render_predicted_player).run_if(in_state(ClientAppState::Game)),
         );
 
-        // In update because we need to read events, and the order doesnt currently matter
-        app.observe(customize_predicted_player);
+        // In observe because ideally this should be stateless
+        app.observe(customize_local_player);
+
+        // In update because we need to check this continously
+        app.add_systems(Update, customize_player_on_other_clients);
 
         // Debug
         app.register_type::<ClientIdPlayerMap>();
@@ -96,7 +100,7 @@ fn render_predicted_player(
     }
 }
 
-/// Nested function - Necessary that intakes a given a file_path string and spawns the given scene for it.
+/// Callable function - Necessary that intakes a given a file_path string and spawns the given scene for it.
 fn spawn_visual_scene(
     file_path: &str,
     gltf_collection: &Res<GltfCollection>,
@@ -135,10 +139,15 @@ fn spawn_visual_scene(
     }
 }
 
-/// Intake change char customizer event and start the given actions for rendered predicted entities
-/// Notice here how a lot of things here are in if let some statements this is purposefull as later this will facilitate our migration to
-/// Incremental customization and diminishing customization
-fn customize_predicted_player(
+/// This guy is quite a biggie so here is a full explanation on how our character customizer works
+/// -> First either egui or UI shall send a change char event message to client
+/// -> THe function customize_player shall consume this local event and do all the actions necessary to make the customization occurs
+/// -> After that we send a message to server, server shall validate if the character can leave the customization screen
+/// -> If he okays it he will send a save message event with an optional field change char filled
+/// -> If not the optional field will not be filled, when that happens
+/// -> That client will enter a rollback state where when he leaves the current ui state, his character will automatically return to the previous visual state
+/// -> Why like this? Well to ensure no visual hacks and also to let player test out visuals he doesnt have access to.
+fn customize_local_player(
     change_char: Trigger<ChangeCharEvent>,
     mut player_visuals: Query<&mut PlayerVisuals, With<Predicted>>,
     player_map: Res<ClientIdPlayerMap>,
@@ -153,7 +162,81 @@ fn customize_predicted_player(
     let client_id = &event.client_id;
     let part_to_change = &event.path_to_part;
     let body_part = &event.body_part;
+    let customized_visual = customize_player(
+        client_id,
+        body_part,
+        part_to_change,
+        &mut player_visuals,
+        &player_map,
+        &mut body_part_map,
+        &gltf_collection,
+        &gltfs,
+        &mut commands,
+    );
+    if let Some(custom_visual) = customized_visual {
+        if connection_manager
+            .send_message::<CommonChannel, SaveMessage>(&mut SaveMessage {
+                save_info: CoreInformation::total_new(*client_id, custom_visual.clone()),
+                change_char: Some(event.clone()),
+            })
+            .is_err()
+        {
+            warn!("Failed to send save to server!")
+        }
+    }
+}
 
+/// Validates if server gave the okay or not, after that we customize our other clients
+fn customize_player_on_other_clients(
+    mut save_message: EventReader<MessageEvent<SaveMessage>>,
+    mut player_visuals: Query<&mut PlayerVisuals, With<Predicted>>,
+    player_map: Res<ClientIdPlayerMap>,
+    mut body_part_map: ResMut<BodyPartMap>,
+    opt_gltf_collection: Option<Res<GltfCollection>>,
+    gltfs: Res<Assets<Gltf>>,
+    mut commands: Commands,
+) {
+    for event in save_message.read() {
+        let message = event.message();
+        //Wowzers that is a lot of fields
+        let client_id = &message.save_info.player_id.id;
+        if let Some(change_char) = &message.change_char {
+            info!("Server gave the okay lets change this client on other");
+            let body_part = &change_char.body_part;
+            let part_to_change = &change_char.path_to_part;
+
+            if let Some(gltf_collection) = &opt_gltf_collection {
+                let _ = customize_player(
+                    client_id,
+                    body_part,
+                    part_to_change,
+                    &mut player_visuals,
+                    &player_map,
+                    &mut body_part_map,
+                    &gltf_collection,
+                    &gltfs,
+                    &mut commands,
+                );
+            } else {
+                warn!("This client is most probably in a loading state")
+            }
+        } else {
+            warn!("You dont have this skin yet !")
+        }
+    }
+}
+
+fn customize_player(
+    client_id: &ClientId,
+    body_part: &Parts,
+    part_to_change: &String,
+    player_visuals: &mut Query<&mut PlayerVisuals, With<Predicted>>,
+    player_map: &Res<ClientIdPlayerMap>,
+    body_part_map: &mut ResMut<BodyPartMap>,
+    gltf_collection: &Res<GltfCollection>,
+    gltfs: &Res<Assets<Gltf>>,
+    mut commands: &mut Commands,
+) -> Option<PlayerVisuals> {
     // Finding player entity via map
     if let Some(entity) = player_map.map.get(client_id) {
         // Grab the player's current visuals not mutably server needs to validate
@@ -187,49 +270,27 @@ fn customize_predicted_player(
                     .map
                     .insert((*client_id, part_to_change.to_string()), id);
 
-                // // Mutating player visuals do this after every validation has been passed
+                // Mutating player visuals do this after every validation has been passed
                 *current_part = part_to_change.clone();
 
                 // Make player parent of the new spawned scene
                 commands.entity(id).set_parent(*entity);
-
-                // TODO - Capture event in server, and homolog it
-                if connection_manager
-                    .send_message::<CommonChannel, SaveMessage>(&mut SaveMessage {
-                        save_info: CoreInformation::total_new(*client_id, player_visual.clone()),
-                    })
-                    .is_err()
-                {
-                    warn!("Failed to send save to server!")
-                }
+                Some(player_visual.clone())
+            } else {
+                panic!("Somethign went wrong spawning new visual scene");
             }
         } else {
             info!(
                 "Part '{}' for client {} is already current; no changes made",
                 part_to_change, client_id
             );
+            None
         }
     } else {
         warn!(
             "Something went terribly wrong; couldn't find client_id {} player entity",
             client_id
-        )
+        );
+        None
     }
 }
-
-// /// This should only occur once everything is correct in client
-// fn notify_server_of_visual_change(
-//     player_comp: Query<&PlayerVisuals, Changed<PlayerVisuals>>,
-//     mut connection_manager: ResMut<ClientConnectionManager>,
-// ) {
-//     for player_visuals in player_comp.iter() {
-//         if connection_manager
-//             .send_message::<CommonChannel, SaveVisual>(&mut SaveVisual {
-//                 loaded_visuals: player_visuals.clone(),
-//             })
-//             .is_err()
-//         {
-//             warn!("Failed to send visual customization message to the server");
-//         }
-//     }
-// }

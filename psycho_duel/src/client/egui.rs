@@ -29,7 +29,7 @@ pub struct EguiWantsFocus {
 
 /// Gives me the current parts in ui we are able to customize,utilized in combo box button
 /// Locals - Variables that are unique to a system, and only have a reference to that system.
-#[derive(PartialEq, Debug, Default, Clone)]
+#[derive(PartialEq, Debug, Default, Serialize, Deserialize, Clone)]
 pub enum Parts {
     #[default]
     Head,
@@ -54,7 +54,7 @@ const LEG_PATHS: [&'static str; 2] = [
 ];
 
 /// Carrier of information usefull for our char customizer
-#[derive(Event, Debug)]
+#[derive(Event, Serialize, Deserialize, Debug, Clone, PartialEq)]
 pub struct ChangeCharEvent {
     /// Client id of who asked for adjustment1
     pub client_id: ClientId,
@@ -101,9 +101,12 @@ fn inspector_ui(world: &mut World) {
         // All you need to do is add more and more .show to make heavier nests. And call ui a lot if you want to make buttons and such
         // Egui context.get_mut grab the underlying context it is a handy way of grab self without the annoyance of self arguments mid usage
         egui::SidePanel::right("right_panel").show(egui_context.get_mut(), |ui| {
-            ui.heading("Client debugging");
+            ui.heading("Client debuger");
             egui::ScrollArea::both().show(ui, |ui| {
-                ui.label("States inspector");
+                ui.heading("States inspector");
+                ui.add_space(10.0);
+                // Creates a little division strand
+                ui.separator();
                 // Creates an empty space
                 ui.add_space(10.0);
                 bevy_inspector_egui::bevy_inspector::ui_for_state::<ClientAppState>(world, ui);
@@ -114,7 +117,6 @@ fn inspector_ui(world: &mut World) {
 
                 ui.heading("Additional Resources");
                 ui.add_space(10.0);
-                // Creates a little division strand
                 ui.separator();
                 // Here we are using this little ui_push id to avoid same widget id for both of them FIX - Little red warning hehe
                 ui.push_id("core_easy_client", |ui| {
@@ -218,7 +220,7 @@ fn char_customizer_ui(world: &mut World, mut selected_button: Local<Parts>) {
     }
 }
 
-/// Nested function utilized to avoid repetitition
+/// Callable function utilized to avoid repetitition
 fn send_change_event(world: &mut World, body_part: Parts, path_to_part: &str, client_id: ClientId) {
     //We dont actually want event here we just wanna trigger observer
     if let Some(_) = world.get_resource_mut::<Events<ChangeCharEvent>>() {

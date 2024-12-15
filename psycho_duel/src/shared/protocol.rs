@@ -1,3 +1,4 @@
+use crate::client::egui::ChangeCharEvent;
 use crate::client::egui::Parts;
 use crate::shared::ClientId;
 use bevy::prelude::*;
@@ -102,10 +103,12 @@ impl CoreInformation {
     }
 }
 
-/// An event message sent by client to server that gives the player currently chosen loadout
-#[derive(Serialize, Deserialize, Clone, PartialEq)]
+/// A bidirectional message utilized, to save things on server.
+/// If one of the optional fields are passed we should validate the information on that event
+#[derive(Event, Serialize, Deserialize, Clone, PartialEq)]
 pub struct SaveMessage {
     pub save_info: CoreInformation,
+    pub change_char: Option<ChangeCharEvent>,
 }
 
 /// Centralization plugin - Defines how our component will be synced (from server to client or client to server or bidirectional)
@@ -140,7 +143,7 @@ impl Plugin for ProtocolPlugin {
         // -> First register message
         // -> Send her via clientconnectionmessager using send_message function with all of it is shenanigans
         // -> Read it via EventReader<MessageEvent<>>
-        app.register_message::<SaveMessage>(ChannelDirection::ClientToServer);
+        app.register_message::<SaveMessage>(ChannelDirection::Bidirectional);
 
         // Debug registering
         app.register_type::<PlayerId>();
