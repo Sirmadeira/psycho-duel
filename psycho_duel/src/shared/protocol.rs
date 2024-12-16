@@ -7,6 +7,7 @@ use lightyear::prelude::client::ComponentSyncMode;
 use lightyear::prelude::*;
 use serde::Deserialize;
 use serde::Serialize;
+
 /// Essential struct that marks our player predicted entity.
 #[derive(Component, Reflect, Serialize, Deserialize, PartialEq, Clone)]
 pub struct PlayerMarker;
@@ -82,8 +83,9 @@ pub struct CoreSaveInfoMap {
 /// It also stores a client_id pointer
 #[derive(Bundle, Serialize, Deserialize, Reflect, Clone, Debug, PartialEq)]
 pub struct CoreInformation {
-    pub player_visuals: PlayerVisuals,
     pub player_id: PlayerId,
+    pub player_visuals: PlayerVisuals,
+    pub currency: Currency,
 }
 
 impl CoreInformation {
@@ -92,13 +94,19 @@ impl CoreInformation {
         Self {
             player_id: PlayerId { id: client_id },
             player_visuals: PlayerVisuals::default(),
+            currency: Currency::default(),
         }
     }
     // Pass a client id + current player visual, get a totally new core information
-    pub fn total_new(client_id: ClientId, player_visuals: PlayerVisuals) -> Self {
+    pub fn total_new(
+        client_id: ClientId,
+        player_visuals: PlayerVisuals,
+        currency: Currency,
+    ) -> Self {
         Self {
             player_id: PlayerId { id: client_id },
             player_visuals: player_visuals,
+            currency: currency,
         }
     }
 }
@@ -110,6 +118,27 @@ pub struct SaveMessage {
     pub save_info: CoreInformation,
     pub change_char: Option<ChangeCharEvent>,
 }
+/// Struct responsible to tell me how much money player have she is gonna have a bunch of mathematical implementations
+/// For ease of use
+#[derive(Component, Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Reflect)]
+pub struct Currency {
+    pub amount: u64,
+}
+
+impl Default for Currency {
+    fn default() -> Self {
+        Self { amount: 1 }
+    }
+}
+
+impl Currency {
+    pub fn add(&mut self, value: u64) {
+        self.amount += value;
+    }
+    pub fn sub(&mut self, value: u64) {
+        self.amount -= value;
+    }
+}
 
 /// Centralization plugin - Defines how our component will be synced (from server to client or client to server or bidirectional)
 /// Defines what essential components need to be replicated among the two.
@@ -119,23 +148,27 @@ impl Plugin for ProtocolPlugin {
     fn build(&self, app: &mut App) {
         // Essential infos - Channeldirection = Who sends message to who, is it  server to client, client to server?
         // Add prediction - Imagine  it like this - Either server or client, spawns entity with these shared components. Example - commands.spawn(PlayerMarker)
-        // -> Via register_component and channel direction we define which should be transmissible. Important - the replicate component says - What entities should be replicated, or predicted, or interpolated and to whom
+        // -> Via register_component and channel direction we define what direction components should be transmissible.
+        // -> Important - the replicate component says - What entities should be replicated, or predicted, or interpolated and to whom
         // -> If when you added Replicated, you added a sync_targer prediction. You are going to spawn a predicted entity, if you added add_prediction in register_component
         // -> The predicted entity shall have that component
-        // -> Componentsyncmode - Tells exactly, how many times we should replicate it to client or server.
+        // -> Componentsyncmode - Tells exactly,how the component from confirmed should be replicated to predicted. If simple, whenever you mutate in
+        // Confirmed mutate in predicted
         app.register_component::<PlayerMarker>(ChannelDirection::ServerToClient)
             .add_prediction(ComponentSyncMode::Once);
         app.register_component::<PlayerId>(ChannelDirection::ServerToClient)
             .add_prediction(ComponentSyncMode::Once);
-        app.register_component::<PlayerVisuals>(ChannelDirection::Bidirectional)
+        app.register_component::<PlayerVisuals>(ChannelDirection::ServerToClient)
             .add_prediction(ComponentSyncMode::Simple);
-        app.register_component::<Name>(ChannelDirection::Bidirectional)
+        app.register_component::<Currency>(ChannelDirection::Bidirectional)
+            .add_prediction(ComponentSyncMode::Simple);
+        app.register_component::<Name>(ChannelDirection::ServerToClient)
             .add_prediction(ComponentSyncMode::Once)
-            .add_interpolation(ComponentSyncMode::Once);
+            .add_interpolation(ComponentSyncMode::Simple);
 
         // Replicated resources -  The workflow for replicated resources is as follows
         //-> First - Register in shared, as he is supposed to exist both in client and server
-        //-> Second - Initialize him in server or vice versa depending on your channel direction
+        //-> Second - Initialize him in server and client
         //-> Third - Do commands.replicate to start replicating him when necessary
         app.register_resource::<CoreSaveInfoMap>(ChannelDirection::ServerToClient);
 

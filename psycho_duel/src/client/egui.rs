@@ -1,11 +1,15 @@
-use std::ops::DerefMut;
+use std::ops::{Add, DerefMut};
 
+use crate::client::{ClientAppState, CoreEasyClient};
+use crate::shared::protocol::Currency;
 use bevy::prelude::*;
 use bevy::window::PrimaryWindow;
 use bevy_egui::{egui, EguiContext};
+use client::{NetworkingState, Predicted};
 use lightyear::prelude::*;
+use lightyear::shared::replication::components::Controlled;
 
-use crate::client::{ClientAppState, CoreEasyClient};
+use super::protocol::PlayerMarker;
 /// Client focused egui
 pub struct ClientEguiPlugin;
 
@@ -52,7 +56,7 @@ impl Plugin for ClientEguiPlugin {
         app.add_event::<ChangeCharEvent>();
 
         //In update by default
-        app.add_systems(Update, (inspector_ui, char_customizer_ui));
+        app.add_systems(Update, (inspector_ui, char_customizer_ui, currency_ui));
     }
 }
 
@@ -71,7 +75,7 @@ fn inspector_ui(world: &mut World) {
         // All you need to do is add more and more .show to make heavier nests. And call ui a lot if you want to make buttons and such
         // Egui context.get_mut grab the underlying context it is a handy way of grab self without the annoyance of self arguments mid usage
         egui::SidePanel::right("right_panel").show(egui_context.get_mut(), |ui| {
-            ui.heading("Client debuger");
+            ui.heading("Client debugger");
             egui::ScrollArea::both().show(ui, |ui| {
                 ui.heading("States inspector");
                 ui.add_space(10.0);
@@ -165,7 +169,7 @@ fn char_customizer_ui(world: &mut World, mut selected_button: Local<Parts>) {
     }
 }
 
-/// Callable function utilized to avoid repetitition
+/// Callable function utilized to avoid repetitition in char custumizedr ui
 fn send_change_event(world: &mut World, body_part: Parts, path_to_part: &str, client_id: ClientId) {
     //We dont actually want event here we just wanna trigger observer
     if let Some(_) = world.get_resource_mut::<Events<ChangeCharEvent>>() {
@@ -180,5 +184,31 @@ fn send_change_event(world: &mut World, body_part: Parts, path_to_part: &str, cl
         );
     } else {
         warn!("ChangeCharEvent is not registered. Did you forget to add it with `.add_event()`?");
+    }
+}
+
+/// Egui responsible to test features such as buying , selling, items, gaining currency, losing currency
+fn currency_ui(world: &mut World) {
+    if let Some(network_state) = world.get_resource::<State<NetworkingState>>() {
+        if network_state.eq(&NetworkingState::Connected) {
+            let egui_context = world
+                .query_filtered::<&mut EguiContext, With<PrimaryWindow>>()
+                .get_single(world)
+                .unwrap();
+            let mut egui_context = egui_context.clone();
+            // Grabing client player currency amount
+            if let Some(mut connection_manager) =
+                world.get_resource_mut::<ClientConnectionManager>()
+            {
+                egui::Window::new("Currency mechanics").show(egui_context.get_mut(), |ui| {
+                    if ui.button("Gain currency").clicked() {
+                        // Send event here
+                    }
+                    if ui.button("Lose currency").clicked() {
+                        // Send event here
+                    }
+                });
+            }
+        }
     }
 }

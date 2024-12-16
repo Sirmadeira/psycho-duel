@@ -25,6 +25,7 @@ impl Plugin for SavePlugin {
 
         // Startup because ideally we should only run this once really early
         app.add_systems(Startup, create_or_read_save_file);
+
         // Update because if changes have been made we want to replicate those server changes to client
         app.add_systems(Update, replicate_resource);
 

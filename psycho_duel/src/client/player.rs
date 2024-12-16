@@ -141,11 +141,11 @@ fn spawn_visual_scene(
 
 /// This guy is quite a biggie so here is a full explanation on how our character customizer works
 /// -> First either egui or UI shall send a change char event message to client
-/// -> THe function customize_player shall consume this local event and do all the actions necessary to make the customization occurs
-/// -> After that we send a message to server, server shall validate if the character can leave the customization screen
-/// -> If he okays it he will send a save message event with an optional field change char filled
-/// -> If not the optional field will not be filled, when that happens
-/// -> That client will enter a rollback state where when he leaves the current ui state, his character will automatically return to the previous visual state
+/// -> THe function customize_local_player shall consume this local event and do all the actions necessary to make the customization occurs
+/// -> After that we send a message to server a save message, server shall validate it
+/// -> If he okays, he will change the confirmed entity, and propagate the save message to the other clients
+/// -> If not he will tell that client, he can test it but when he leaves he will enter a rollback state where we reverse him.
+/// -> Why save message? Well because indepently of what happens we will have to save the entire save, might as well make that clear.
 /// -> Why like this? Well to ensure no visual hacks and also to let player test out visuals he doesnt have access to.
 fn customize_local_player(
     change_char: Trigger<ChangeCharEvent>,
@@ -154,6 +154,7 @@ fn customize_local_player(
     mut body_part_map: ResMut<BodyPartMap>,
     gltf_collection: Res<GltfCollection>,
     gltfs: Res<Assets<Gltf>>,
+    core_info_map: Res<CoreSaveInfoMap>,
     mut connection_manager: ResMut<ClientConnectionManager>,
     mut commands: Commands,
 ) {
@@ -174,9 +175,18 @@ fn customize_local_player(
         &mut commands,
     );
     if let Some(custom_visual) = customized_visual {
+        let previous_core_info = core_info_map
+            .map
+            .get(client_id)
+            .expect("For him to have a precessor save file");
+
         if connection_manager
             .send_message::<CommonChannel, SaveMessage>(&mut SaveMessage {
-                save_info: CoreInformation::total_new(*client_id, custom_visual.clone()),
+                save_info: CoreInformation::total_new(
+                    *client_id,
+                    custom_visual.clone(),
+                    previous_core_info.currency,
+                ),
                 change_char: Some(event.clone()),
             })
             .is_err()
