@@ -1,5 +1,4 @@
-use crate::server::protocol::CoreInformation;
-use crate::shared::protocol::CoreSaveInfoMap;
+use crate::server::protocol::*;
 use bevy::prelude::*;
 use bincode::{deserialize_from, serialize_into};
 use lightyear::prelude::*;
@@ -121,6 +120,7 @@ fn check_client_sent_core_information(
     mut core_info_map: ResMut<CoreSaveInfoMap>,
     player_map: Res<ServerClientIdPlayerMap>,
     mut player_visual: Query<&mut PlayerVisuals>,
+    mut player_currency: Query<&mut Currency>,
     mut connection_manager: ResMut<ServerConnectionManager>,
 ) {
     for save_message in save_from_client.read() {
@@ -132,24 +132,31 @@ fn check_client_sent_core_information(
         if let Some(previous_core) = core_info_map.map.get_mut(&client_id) {
             let mut new_core_information = previous_core.clone(); // Start with previous core information
 
+            // It is basically impossible for player to not be in map
+            let player_entity = player_map.map.get(&client_id).unwrap();
+
             // Validation stage for visual changes - Skip here if he doesnt pass validation
             if let Some(change_visual) = &message.change_char {
                 // Perform any validation logic here
                 info!("Validation for visual change: {:?}", change_visual);
-                if let Some(player_entity) = player_map.map.get(&client_id) {
-                    // Mutating confirmed entity in client to follow new old part
-                    let mut server_visual = player_visual.get_mut(*player_entity).unwrap();
-                    let body_part = &change_visual.body_part;
-                    let old_part = server_visual.get_visual_mut(body_part);
-                    let new_part = change_visual.path_to_part.clone();
-                    *old_part = new_part;
-                    new_core_information.player_visuals = server_visual.clone();
-                }
+                // Mutating confirmed entity in client to follow new old part
+                let mut server_visual = player_visual.get_mut(*player_entity).unwrap();
+                let body_part = &change_visual.body_part;
+                let old_part = server_visual.get_visual_mut(body_part);
+                let new_part = change_visual.path_to_part.clone();
+                *old_part = new_part;
+                new_core_information.player_visuals = server_visual.clone();
+            }
+
+            // Validation stage for player currency changes
+            if let Some(currency) = &message.change_currency {
+                info!("Validation for currency");
+                let mut prev_currency = player_currency.get_mut(*player_entity).unwrap();
+                *prev_currency = *currency;
             }
 
             // After validation stage change core information on map and save
             *previous_core = new_core_information;
-            // Save updated core info map
             save(core_info_map.clone());
             // Broadcast save message to clients to act upon
             if connection_manager

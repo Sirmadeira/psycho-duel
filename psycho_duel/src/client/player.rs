@@ -188,6 +188,7 @@ fn customize_local_player(
 }
 
 /// Validates if server gave the okay or not, after that we customize our other clients
+/// Only applies customization logic, even tho it captures save message
 fn customize_player_on_other_clients(
     mut save_message: EventReader<MessageEvent<SaveMessage>>,
     mut player_visuals: Query<&mut PlayerVisuals, With<Predicted>>,
@@ -199,10 +200,9 @@ fn customize_player_on_other_clients(
 ) {
     for event in save_message.read() {
         let message = event.message();
-        //Wowzers that is a lot of fields
-        let client_id = &message.id;
         if let Some(change_char) = &message.change_char {
-            info!("Server gave the okay lets change this client on other");
+            info!("Server gave the okay lets change this client on others");
+            let client_id = &message.id;
             let body_part = &change_char.body_part;
             let part_to_change = &change_char.path_to_part;
 
@@ -221,8 +221,6 @@ fn customize_player_on_other_clients(
             } else {
                 warn!("This client is most probably in a loading state")
             }
-        } else {
-            warn!("This save message is not for you! TODO")
         }
     }
 }

@@ -5,7 +5,7 @@ use crate::shared::protocol::Currency;
 use bevy::prelude::*;
 use bevy::window::PrimaryWindow;
 use bevy_egui::{egui, EguiContext};
-use client::{Confirmed, NetworkingState, Predicted};
+use client::{NetworkingState, Predicted};
 use lightyear::prelude::*;
 use lightyear::shared::replication::components::Controlled;
 
@@ -192,7 +192,7 @@ fn send_trigger_event(
 /// Egui responsible to test features such as buying , selling, items, gaining currency, losing currency
 fn currency_ui(
     mut contexts: bevy_egui::EguiContexts,
-    mut player_q: Query<(&PlayerId, &mut Currency), (With<Confirmed>, With<Controlled>)>,
+    mut player_q: Query<(&PlayerId, &mut Currency), (With<Predicted>, With<Controlled>)>,
     mut connection_manager: ResMut<ClientConnectionManager>,
     networking_state: Res<State<NetworkingState>>,
 ) {
@@ -205,7 +205,7 @@ fn currency_ui(
             // Use the egui context
             egui::Window::new("Currency mechanics").show(egui_context, |ui| {
                 if ui.button("Gain currency").clicked() {
-                    current_currency.add(10);
+                    current_currency.add(10.0);
 
                     // Send event here
                     let _ = connection_manager.send_message::<CommonChannel, SaveMessage>(
@@ -217,8 +217,11 @@ fn currency_ui(
                     );
                 }
                 if ui.button("Lose currency").clicked() {
+                    if current_currency.amount < 0.0 {
+                        warn!("Renember money is everything UNWORTHY mechanic goes here")
+                    }
                     // Adjust currency logic and send event here
-                    current_currency.sub(10);
+                    current_currency.sub(10.0);
 
                     let _ = connection_manager.send_message::<CommonChannel, SaveMessage>(
                         &mut SaveMessage {

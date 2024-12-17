@@ -113,22 +113,22 @@ pub struct SaveMessage {
 
 /// Struct responsible to tell me how much money player have she is gonna have a bunch of mathematical implementations
 /// For ease of use
-#[derive(Component, Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Reflect)]
+#[derive(Component, Debug, Clone, Copy, PartialEq, Serialize, Deserialize, Reflect)]
 pub struct Currency {
-    pub amount: u64,
+    pub amount: f32,
 }
 
 impl Default for Currency {
     fn default() -> Self {
-        Self { amount: 1 }
+        Self { amount: 1.0 }
     }
 }
 
 impl Currency {
-    pub fn add(&mut self, value: u64) {
+    pub fn add(&mut self, value: f32) {
         self.amount += value;
     }
-    pub fn sub(&mut self, value: u64) {
+    pub fn sub(&mut self, value: f32) {
         self.amount -= value;
     }
 }
