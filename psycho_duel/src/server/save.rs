@@ -126,7 +126,9 @@ fn check_client_sent_core_information(
     for save_message in save_from_client.read() {
         let mut message = save_message.message().clone();
         let client_id = message.id;
-        // Update core info map and apply visual updates if validation passes
+        // First -> Validate optional fields in save_message
+        // Second -> Override coreinformation values according to new valuies
+        // Third -> Send message to other clients
         if let Some(previous_core) = core_info_map.map.get_mut(&client_id) {
             let mut new_core_information = previous_core.clone(); // Start with previous core information
 
@@ -135,7 +137,7 @@ fn check_client_sent_core_information(
                 // Perform any validation logic here
                 info!("Validation for visual change: {:?}", change_visual);
                 if let Some(player_entity) = player_map.map.get(&client_id) {
-                    // Mutatin confirmed entity in client to follow new old part
+                    // Mutating confirmed entity in client to follow new old part
                     let mut server_visual = player_visual.get_mut(*player_entity).unwrap();
                     let body_part = &change_visual.body_part;
                     let old_part = server_visual.get_visual_mut(body_part);

@@ -16,6 +16,7 @@ pub struct PlayerMarker;
 /// IMPORTANT- Every entity that is reasonably used, should have similar identifiers
 #[derive(Component, Reflect, Serialize, Deserialize, PartialEq, Debug, Clone)]
 pub struct PlayerId {
+    /// Base client id of this player
     pub id: ClientId,
 }
 
@@ -49,7 +50,7 @@ impl Default for PlayerVisuals {
 }
 
 impl PlayerVisuals {
-    // Returns an iterator over the visual components. Inclu
+    /// Returns an iterator over the visual components. Good iterator for when spawning first the entity
     pub fn iter_visuals(&self) -> impl Iterator<Item = &String> {
         vec![&self.head, &self.torso, &self.leg, &self.skeleton].into_iter()
     }
@@ -62,6 +63,8 @@ impl PlayerVisuals {
             Parts::Leg => &self.leg,
         }
     }
+    /// Returns a mutable reference to the visual component corresponding to the given`Parts` enum
+    /// Avoids the usage of uncessary match statements
     pub fn get_visual_mut(&mut self, part: &Parts) -> &mut String {
         match part {
             Parts::Head => &mut self.head,
@@ -100,11 +103,12 @@ impl CoreInformation {
 }
 
 /// A bidirectional message utilized, to save things on server.
-/// If one of the optional fields are passed we should validate the information on that event
+/// If one of the optional fields are passed we should validate the information.
 #[derive(Event, Serialize, Deserialize, Clone, PartialEq)]
 pub struct SaveMessage {
     pub id: ClientId,
     pub change_char: Option<ChangeCharEvent>,
+    pub change_currency: Option<Currency>,
 }
 
 /// Struct responsible to tell me how much money player have she is gonna have a bunch of mathematical implementations
@@ -135,14 +139,12 @@ pub struct ProtocolPlugin;
 
 impl Plugin for ProtocolPlugin {
     fn build(&self, app: &mut App) {
-        // Essential infos - Channeldirection = Who sends message to who, is it  server to client, client to server?
-        // Add prediction - Imagine  it like this - Either server or client, spawns entity with these shared components. Example - commands.spawn(PlayerMarker)
-        // -> Via register_component and channel direction we define what direction components should be transmissible.
-        // -> Important - the replicate component says - What entities should be replicated, or predicted, or interpolated and to whom
-        // -> If when you added Replicated, you added a sync_targer prediction. You are going to spawn a predicted entity, if you added add_prediction in register_component
-        // -> The predicted entity shall have that component
-        // -> Componentsyncmode - Tells exactly,how the component from confirmed should be replicated to predicted. If simple, whenever you mutate in
-        // Confirmed mutate in predicted
+        // -> First - Spawn an entity with replicate component on server, after you do that this api applies it is logic
+        // -> Second - Register component, means that component will be available on the replicated entity on client
+        // -> Third - ChannelDirection tells me if it is server to client or client  to server, the replication direction.
+        // Most cases is the first method (Server authoritative avoids hacks)
+        // -> Fourth - Add prediction, inserts that component on the predicted entity.
+        // -> Fifth - ComponentSyncMode tell me, how many time we should send that information from confirmed entity, to predicted.
         app.register_component::<PlayerMarker>(ChannelDirection::ServerToClient)
             .add_prediction(ComponentSyncMode::Once);
         app.register_component::<PlayerId>(ChannelDirection::ServerToClient)

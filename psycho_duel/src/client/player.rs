@@ -142,7 +142,7 @@ fn spawn_visual_scene(
 /// This guy is quite a biggie so here is a full explanation on how our character customizer works
 /// -> First either egui or UI shall send a change char event message to client
 /// -> THe function customize_local_player shall consume this local event and do all the actions necessary to make the customization occurs
-/// -> After that we send a message to server a save message, server shall validate it
+/// -> After that we send a message to server, a save message, server shall validate it
 /// -> If he okays, he will change the confirmed entity, and propagate the save message to the other clients
 /// -> If not he will tell that client, he can test it but when he leaves he will enter a rollback state where we reverse him.
 /// -> Why save message? Well because indepently of what happens we will have to save the entire save, might as well make that clear.
@@ -179,6 +179,7 @@ fn customize_local_player(
         .send_message::<CommonChannel, SaveMessage>(&mut SaveMessage {
             id: *client_id,
             change_char: Some(event.clone()),
+            change_currency: None,
         })
         .is_err()
     {
@@ -221,7 +222,7 @@ fn customize_player_on_other_clients(
                 warn!("This client is most probably in a loading state")
             }
         } else {
-            warn!("You dont have this skin yet !")
+            warn!("This save message is not for you! TODO")
         }
     }
 }
@@ -240,12 +241,12 @@ fn customize_player(
     // Finding player entity via map
     if let Some(entity) = player_map.map.get(client_id) {
         // Grab the player's current visuals not mutably server needs to validate
-        let mut player_visual = player_visuals
-            .get_mut(*entity)
+        let player_visual = player_visuals
+            .get(*entity)
             .expect("Player to be online and to have visual component");
 
         // Determine the current part
-        let current_part = player_visual.get_visual_mut(body_part);
+        let current_part = player_visual.get_visual(body_part);
 
         // Only proceed if the new part is different from current in player visual
         if current_part != part_to_change {
@@ -270,13 +271,10 @@ fn customize_player(
                     .map
                     .insert((*client_id, part_to_change.to_string()), id);
 
-                // Mutating player visuals do this after every validation has been passed
-                *current_part = part_to_change.clone();
-
                 // Make player parent of the new spawned scene
                 commands.entity(id).set_parent(*entity);
             } else {
-                panic!("Somethign went wrong spawning new visual scene");
+                panic!("Something went wrong spawning new visual scene");
             }
         } else {
             info!(

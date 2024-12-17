@@ -1,15 +1,16 @@
-use std::ops::{Add, DerefMut};
+use std::ops::DerefMut;
 
 use crate::client::{ClientAppState, CoreEasyClient};
 use crate::shared::protocol::Currency;
 use bevy::prelude::*;
 use bevy::window::PrimaryWindow;
 use bevy_egui::{egui, EguiContext};
-use client::{NetworkingState, Predicted};
+use client::{Confirmed, NetworkingState, Predicted};
 use lightyear::prelude::*;
 use lightyear::shared::replication::components::Controlled;
 
-use super::protocol::PlayerMarker;
+use super::protocol::*;
+use super::CommonChannel;
 /// Client focused egui
 pub struct ClientEguiPlugin;
 
@@ -112,104 +113,122 @@ fn inspector_ui(world: &mut World) {
 }
 
 /// A developer egui utilized to limit test our game character customizer
-fn char_customizer_ui(world: &mut World, mut selected_button: Local<Parts>) {
-    if let Ok(egui_context) = world
-        .query_filtered::<&mut EguiContext, With<PrimaryWindow>>()
-        .get_single(world)
-    {
-        // Clone to grab it concurrently
-        let mut egui_context = egui_context.clone();
+fn char_customizer_ui(
+    mut contexts: bevy_egui::EguiContexts,
+    local_player: Query<&PlayerId, (With<Predicted>, With<Controlled>)>,
+    networking_state: Res<State<NetworkingState>>,
+    mut selected_button: Local<Parts>,
+    mut commands: Commands,
+) {
+    // Only should appear if connected and replciation ocurred
+    if networking_state.eq(&NetworkingState::Connected) {
+        if let Ok(player_id) = local_player.get_single() {
+            // Egui context
+            let egui_context = contexts.ctx_mut();
 
-        // Cleaner dereferencing
-        let selected_button = selected_button.deref_mut();
+            // Cleaner dereferencing
+            let selected_button = selected_button.deref_mut();
+            egui::Window::new("Char customizer").show(egui_context, |ui| {
+                egui::ScrollArea::both().show(ui, |ui| {
+                    ui.label("Part to change");
+                    // For some unknow reason combobox requires hash id, which I just didnt feel like writing so from empty label it is
+                    egui::ComboBox::from_label("")
+                        .selected_text(format!("{:?}", selected_button))
+                        .show_ui(ui, |ui| {
+                            ui.selectable_value(selected_button, Parts::Head, "Head");
+                            ui.selectable_value(selected_button, Parts::Torso, "Torso");
+                            ui.selectable_value(selected_button, Parts::Leg, "Leg");
+                        });
 
-        egui::Window::new("Char customizer").show(egui_context.get_mut(), |ui| {
-            egui::ScrollArea::both().show(ui, |ui| {
-                ui.label("Part to change");
-                // For some unknow reason combobox requires hash id, which I just didnt feel like writing so from empty label it is
-                egui::ComboBox::from_label("")
-                    .selected_text(format!("{:?}", selected_button))
-                    .show_ui(ui, |ui| {
-                        ui.selectable_value(selected_button, Parts::Head, "Head");
-                        ui.selectable_value(selected_button, Parts::Torso, "Torso");
-                        ui.selectable_value(selected_button, Parts::Leg, "Leg");
-                    });
+                    ui.label("Available parts");
+                    // Matching pattern to grab pre defined const paths
+                    let paths = match selected_button {
+                        Parts::Head => &HEAD_PATHS,
+                        Parts::Torso => &TORSO_PATHS,
+                        Parts::Leg => &LEG_PATHS,
+                    };
 
-                ui.label("Available parts");
-                // Matching pattern to grab pre defined const paths
-                let paths = match selected_button {
-                    Parts::Head => &HEAD_PATHS,
-                    Parts::Torso => &TORSO_PATHS,
-                    Parts::Leg => &LEG_PATHS,
-                };
+                    // For each part in path, we make a button  capable of sending an event with it is given file_path
+                    for path_to_part in paths.iter() {
+                        // Slicing for pretty :)
+                        let sliced_str = path_to_part
+                            .split("/")
+                            .last()
+                            .unwrap_or(&path_to_part)
+                            .to_string();
 
-                // For each part in path, we make a button  capable of sending an event with it is given file_path
-                for path_to_part in paths.iter() {
-                    // Slicing for pretty :)
-                    let sliced_str = path_to_part
-                        .split("/")
-                        .last()
-                        .unwrap_or(&path_to_part)
-                        .to_string();
-
-                    if ui.button(sliced_str).clicked() {
-                        // Grab resource easy client for client_id
-                        if let Some(client_holder) = world.get_resource::<CoreEasyClient>() {
-                            let client_id = client_holder.client_id;
+                        if ui.button(sliced_str).clicked() {
+                            let client_id = player_id.id;
                             // Selected button is technically also the definer of what body part we want to change didnt name it differently because of egui context
                             let body_part = selected_button.clone();
-                            send_change_event(world, body_part,path_to_part, client_id);
-                        } else {
-                            warn!("We dont expect to be able to customize character offline ! As we still need to make our save mechanic")
+                            send_trigger_event(&mut commands, body_part, path_to_part, client_id);
                         }
                     }
-                }
-            })
-        });
+                })
+            });
+        }
     }
 }
 
 /// Callable function utilized to avoid repetitition in char custumizedr ui
-fn send_change_event(world: &mut World, body_part: Parts, path_to_part: &str, client_id: ClientId) {
+fn send_trigger_event(
+    commands: &mut Commands,
+    body_part: Parts,
+    path_to_part: &str,
+    client_id: ClientId,
+) {
     //We dont actually want event here we just wanna trigger observer
-    if let Some(_) = world.get_resource_mut::<Events<ChangeCharEvent>>() {
-        world.trigger(ChangeCharEvent {
-            client_id: client_id,
-            body_part: body_part,
-            path_to_part: path_to_part.to_string(),
-        });
-        info!(
-            "Change char event sent successfully! Part to change {} client {}",
-            path_to_part, client_id
-        );
-    } else {
-        warn!("ChangeCharEvent is not registered. Did you forget to add it with `.add_event()`?");
-    }
+    commands.trigger(ChangeCharEvent {
+        client_id: client_id,
+        body_part: body_part,
+        path_to_part: path_to_part.to_string(),
+    });
+    info!(
+        "Change char event sent successfully! Part to change {} client {}",
+        path_to_part, client_id
+    );
 }
 
 /// Egui responsible to test features such as buying , selling, items, gaining currency, losing currency
-fn currency_ui(world: &mut World) {
-    if let Some(network_state) = world.get_resource::<State<NetworkingState>>() {
-        if network_state.eq(&NetworkingState::Connected) {
-            let egui_context = world
-                .query_filtered::<&mut EguiContext, With<PrimaryWindow>>()
-                .get_single(world)
-                .unwrap();
-            let mut egui_context = egui_context.clone();
-            // Grabing client player currency amount
-            if let Some(mut connection_manager) =
-                world.get_resource_mut::<ClientConnectionManager>()
-            {
-                egui::Window::new("Currency mechanics").show(egui_context.get_mut(), |ui| {
-                    if ui.button("Gain currency").clicked() {
-                        // Send event here
-                        // let _ = connection_manager.send_message::
-                    }
-                    if ui.button("Lose currency").clicked() {
-                        // Send event here
-                    }
-                });
-            }
+fn currency_ui(
+    mut contexts: bevy_egui::EguiContexts,
+    mut player_q: Query<(&PlayerId, &mut Currency), (With<Confirmed>, With<Controlled>)>,
+    mut connection_manager: ResMut<ClientConnectionManager>,
+    networking_state: Res<State<NetworkingState>>,
+) {
+    // Only should appear when connected and if replication already ocurred
+    if networking_state.eq(&NetworkingState::Connected) {
+        // It is okay we can mutate locally, nonetheless server will override it via replication if not okaied validation
+        if let Ok((player_id, mut current_currency)) = player_q.get_single_mut() {
+            // Grab primary window ctx
+            let egui_context = contexts.ctx_mut();
+            // Use the egui context
+            egui::Window::new("Currency mechanics").show(egui_context, |ui| {
+                if ui.button("Gain currency").clicked() {
+                    current_currency.add(10);
+
+                    // Send event here
+                    let _ = connection_manager.send_message::<CommonChannel, SaveMessage>(
+                        &mut SaveMessage {
+                            id: player_id.id,
+                            change_char: None,
+                            change_currency: Some(current_currency.clone()),
+                        },
+                    );
+                }
+                if ui.button("Lose currency").clicked() {
+                    // Adjust currency logic and send event here
+                    current_currency.sub(10);
+
+                    let _ = connection_manager.send_message::<CommonChannel, SaveMessage>(
+                        &mut SaveMessage {
+                            id: player_id.id,
+                            change_char: None,
+                            change_currency: Some(current_currency.clone()),
+                        },
+                    );
+                }
+            });
         }
     }
 }
