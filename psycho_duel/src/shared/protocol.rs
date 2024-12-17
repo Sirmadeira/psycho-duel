@@ -97,27 +97,16 @@ impl CoreInformation {
             currency: Currency::default(),
         }
     }
-    // Pass a client id + current player visual, get a totally new core information
-    pub fn total_new(
-        client_id: ClientId,
-        player_visuals: PlayerVisuals,
-        currency: Currency,
-    ) -> Self {
-        Self {
-            player_id: PlayerId { id: client_id },
-            player_visuals: player_visuals,
-            currency: currency,
-        }
-    }
 }
 
 /// A bidirectional message utilized, to save things on server.
 /// If one of the optional fields are passed we should validate the information on that event
 #[derive(Event, Serialize, Deserialize, Clone, PartialEq)]
 pub struct SaveMessage {
-    pub save_info: CoreInformation,
+    pub id: ClientId,
     pub change_char: Option<ChangeCharEvent>,
 }
+
 /// Struct responsible to tell me how much money player have she is gonna have a bunch of mathematical implementations
 /// For ease of use
 #[derive(Component, Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Reflect)]

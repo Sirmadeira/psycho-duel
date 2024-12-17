@@ -125,45 +125,40 @@ fn check_client_sent_core_information(
 ) {
     for save_message in save_from_client.read() {
         let mut message = save_message.message().clone();
-        let save_info = &message.save_info;
-        let client_id = save_info.player_id.id;
-
-        // Validation stage
-        if let Some(visual_change) = &message.change_char {
-            // Perform any validation logic here
-            info!("Validation for visual change: {:?}", visual_change);
-        }
-
+        let client_id = message.id;
         // Update core info map and apply visual updates if validation passes
-        if core_info_map.map.remove(&client_id).is_some() {
-            core_info_map.map.insert(client_id, save_info.clone());
+        if let Some(previous_core) = core_info_map.map.get_mut(&client_id) {
+            let mut new_core_information = previous_core.clone(); // Start with previous core information
 
-            if let Some(player_entity) = player_map.map.get(&client_id) {
-                // Adjusting confirmed entities
-                let mut server_visual = player_visual.get_mut(*player_entity).unwrap();
-                *server_visual = save_info.player_visuals.clone();
-
-                // Save updated core info map
-                save(core_info_map.clone());
-
-                // Broadcast updated visuals to all clients
-                if connection_manager
-                    .send_message_to_target::<CommonChannel, SaveMessage>(
-                        &mut message,
-                        NetworkTarget::All,
-                    )
-                    .is_err()
-                {
-                    warn!("Even tho server gave the okay couldnt broadcast message to all clients!")
+            // Validation stage for visual changes - Skip here if he doesnt pass validation
+            if let Some(change_visual) = &message.change_char {
+                // Perform any validation logic here
+                info!("Validation for visual change: {:?}", change_visual);
+                if let Some(player_entity) = player_map.map.get(&client_id) {
+                    // Mutatin confirmed entity in client to follow new old part
+                    let mut server_visual = player_visual.get_mut(*player_entity).unwrap();
+                    let body_part = &change_visual.body_part;
+                    let old_part = server_visual.get_visual_mut(body_part);
+                    let new_part = change_visual.path_to_part.clone();
+                    *old_part = new_part;
+                    new_core_information.player_visuals = server_visual.clone();
                 }
-            } else {
-                warn!(
-                    "Could not find player entity for client_id: {}. Core info map not saved.",
-                    client_id
-                );
             }
-        } else {
-            warn!("No existing core info found for client_id: {}.", client_id);
+
+            // After validation stage change core information on map and save
+            *previous_core = new_core_information;
+            // Save updated core info map
+            save(core_info_map.clone());
+            // Broadcast save message to clients to act upon
+            if connection_manager
+                .send_message_to_target::<CommonChannel, SaveMessage>(
+                    &mut message,
+                    NetworkTarget::All,
+                )
+                .is_err()
+            {
+                warn!("Even tho server gave the okay couldnt broadcast message to all clients!")
+            }
         }
     }
 }

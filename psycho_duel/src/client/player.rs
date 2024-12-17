@@ -154,7 +154,6 @@ fn customize_local_player(
     mut body_part_map: ResMut<BodyPartMap>,
     gltf_collection: Res<GltfCollection>,
     gltfs: Res<Assets<Gltf>>,
-    core_info_map: Res<CoreSaveInfoMap>,
     mut connection_manager: ResMut<ClientConnectionManager>,
     mut commands: Commands,
 ) {
@@ -163,7 +162,8 @@ fn customize_local_player(
     let client_id = &event.client_id;
     let part_to_change = &event.path_to_part;
     let body_part = &event.body_part;
-    let customized_visual = customize_player(
+
+    customize_player(
         client_id,
         body_part,
         part_to_change,
@@ -174,25 +174,15 @@ fn customize_local_player(
         &gltfs,
         &mut commands,
     );
-    if let Some(custom_visual) = customized_visual {
-        let previous_core_info = core_info_map
-            .map
-            .get(client_id)
-            .expect("For him to have a precessor save file");
 
-        if connection_manager
-            .send_message::<CommonChannel, SaveMessage>(&mut SaveMessage {
-                save_info: CoreInformation::total_new(
-                    *client_id,
-                    custom_visual.clone(),
-                    previous_core_info.currency,
-                ),
-                change_char: Some(event.clone()),
-            })
-            .is_err()
-        {
-            warn!("Failed to send save to server!")
-        }
+    if connection_manager
+        .send_message::<CommonChannel, SaveMessage>(&mut SaveMessage {
+            id: *client_id,
+            change_char: Some(event.clone()),
+        })
+        .is_err()
+    {
+        warn!("Failed to send save to server!")
     }
 }
 
@@ -209,14 +199,14 @@ fn customize_player_on_other_clients(
     for event in save_message.read() {
         let message = event.message();
         //Wowzers that is a lot of fields
-        let client_id = &message.save_info.player_id.id;
+        let client_id = &message.id;
         if let Some(change_char) = &message.change_char {
             info!("Server gave the okay lets change this client on other");
             let body_part = &change_char.body_part;
             let part_to_change = &change_char.path_to_part;
 
             if let Some(gltf_collection) = &opt_gltf_collection {
-                let _ = customize_player(
+                customize_player(
                     client_id,
                     body_part,
                     part_to_change,
@@ -246,7 +236,7 @@ fn customize_player(
     gltf_collection: &Res<GltfCollection>,
     gltfs: &Res<Assets<Gltf>>,
     mut commands: &mut Commands,
-) -> Option<PlayerVisuals> {
+) {
     // Finding player entity via map
     if let Some(entity) = player_map.map.get(client_id) {
         // Grab the player's current visuals not mutably server needs to validate
@@ -285,7 +275,6 @@ fn customize_player(
 
                 // Make player parent of the new spawned scene
                 commands.entity(id).set_parent(*entity);
-                Some(player_visual.clone())
             } else {
                 panic!("Somethign went wrong spawning new visual scene");
             }
@@ -294,13 +283,11 @@ fn customize_player(
                 "Part '{}' for client {} is already current; no changes made",
                 part_to_change, client_id
             );
-            None
         }
     } else {
         warn!(
             "Something went terribly wrong; couldn't find client_id {} player entity",
             client_id
         );
-        None
     }
 }

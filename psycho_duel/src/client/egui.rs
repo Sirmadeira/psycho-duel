@@ -203,6 +203,7 @@ fn currency_ui(world: &mut World) {
                 egui::Window::new("Currency mechanics").show(egui_context.get_mut(), |ui| {
                     if ui.button("Gain currency").clicked() {
                         // Send event here
+                        // let _ = connection_manager.send_message::
                     }
                     if ui.button("Lose currency").clicked() {
                         // Send event here
