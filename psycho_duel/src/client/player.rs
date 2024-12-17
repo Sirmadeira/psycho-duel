@@ -47,7 +47,7 @@ impl Plugin for ClientPlayerPlugin {
         // In observe because ideally this should be stateless
         app.observe(customize_local_player);
 
-        // In update because we need to check this continously
+        // In update because observer dont work so well with networked
         app.add_systems(Update, customize_player_on_other_clients);
 
         // Debug
@@ -82,19 +82,18 @@ fn render_predicted_player(
     for (parent, player_id, player_visuals) in player.iter() {
         // Avoids error - https://bevyengine.org/learn/errors/b0004/
         commands.entity(parent).insert(SpatialBundle::default());
-        for file_path in player_visuals.iter_visuals() {
-            if let Some(entity) =
-                spawn_visual_scene(file_path, &gltf_collection, &gltfs, &mut commands)
+        for item in player_visuals.iter_visuals() {
+            if let Some(entity) = spawn_visual_scene(item, &gltf_collection, &gltfs, &mut commands)
             {
                 info!(
                     "Spawning visuals for client_id {},{}, entity {} and making them children from predicted entity",
-                    player_id.id, file_path, entity
+                    player_id.id, item, entity
                 );
                 commands.entity(entity).set_parent(parent);
                 info!("Filling body part map with new parts and client id");
                 body_part_map
                     .map
-                    .insert((player_id.id, file_path.to_string()), entity);
+                    .insert((player_id.id, item.file_path.clone()), entity);
             }
         }
     }
@@ -102,20 +101,14 @@ fn render_predicted_player(
 
 /// Callable function - Necessary that intakes a given a file_path string and spawns the given scene for it.
 fn spawn_visual_scene(
-    file_path: &str,
+    item: &Item,
     gltf_collection: &Res<GltfCollection>,
     gltfs: &Res<Assets<Gltf>>,
     commands: &mut Commands,
 ) -> Option<Entity> {
-    if let Some(gltf) = gltf_collection.gltf_files.get(file_path) {
+    // Grab file path and name from our visual item and spawn him
+    if let Some(gltf) = gltf_collection.gltf_files.get(&item.file_path) {
         if let Some(loaded_gltf) = gltfs.get(gltf) {
-            // The name will always be the last part of the file path to string
-            let sliced_str = file_path
-                .split("/")
-                .last()
-                .unwrap_or(&file_path)
-                .to_string();
-
             let scene = loaded_gltf.scenes[0].clone_weak();
             let id = commands
                 .spawn(SceneBundle {
@@ -123,7 +116,7 @@ fn spawn_visual_scene(
 
                     ..default()
                 })
-                .insert(Name::new(sliced_str))
+                .insert(item.name.clone())
                 .id();
             Some(id)
         } else {
@@ -133,7 +126,7 @@ fn spawn_visual_scene(
     } else {
         warn!(
             "Couldnt find the given file path {} in our gltf collection did you forget to add him?",
-            file_path
+            item
         );
         None
     }
@@ -160,13 +153,13 @@ fn customize_local_player(
     let event = change_char.event();
 
     let client_id = &event.client_id;
-    let part_to_change = &event.path_to_part;
+    let new_item = &event.item;
     let body_part = &event.body_part;
 
     customize_player(
         client_id,
         body_part,
-        part_to_change,
+        new_item,
         &mut player_visuals,
         &player_map,
         &mut body_part_map,
@@ -204,13 +197,13 @@ fn customize_player_on_other_clients(
             info!("Server gave the okay lets change this client on others");
             let client_id = &message.id;
             let body_part = &change_char.body_part;
-            let part_to_change = &change_char.path_to_part;
+            let new_item = &change_char.item;
 
             if let Some(gltf_collection) = &opt_gltf_collection {
                 customize_player(
                     client_id,
                     body_part,
-                    part_to_change,
+                    new_item,
                     &mut player_visuals,
                     &player_map,
                     &mut body_part_map,
@@ -228,7 +221,7 @@ fn customize_player_on_other_clients(
 fn customize_player(
     client_id: &ClientId,
     body_part: &Parts,
-    part_to_change: &String,
+    new_item: &Item,
     player_visuals: &mut Query<&mut PlayerVisuals, With<Predicted>>,
     player_map: &Res<ClientIdPlayerMap>,
     body_part_map: &mut ResMut<BodyPartMap>,
@@ -244,30 +237,31 @@ fn customize_player(
             .expect("Player to be online and to have visual component");
 
         // Determine the current part
-        let current_part = player_visual.get_visual(body_part);
+        let current_item = player_visual.get_visual(body_part);
+        let curr_file_path = &current_item.file_path;
+        let new_file_path = &new_item.file_path;
 
         // Only proceed if the new part is different from current in player visual
-        if current_part != part_to_change {
+        if curr_file_path != new_file_path {
             info!(
-                "Changed {:?} part for client {:?} from '{}' to '{}'",
-                body_part, client_id, current_part, part_to_change
+                "Changed {:?} visual item for client {:?} from '{}' to '{}'",
+                body_part, client_id, curr_file_path, new_file_path
             );
 
             // Removing old part from the map
-            let key = (*client_id, current_part.to_string());
+            let key = (*client_id, curr_file_path.to_string());
             if let Some(entity) = body_part_map.map.remove(&key) {
                 info!("Removing old body part from entity {}", entity);
                 commands.entity(entity).despawn_recursive();
             }
 
             // Spawn new visual scene and insert into the map
-            if let Some(id) =
-                spawn_visual_scene(&part_to_change, &gltf_collection, &gltfs, &mut commands)
+            if let Some(id) = spawn_visual_scene(&new_item, &gltf_collection, &gltfs, &mut commands)
             {
                 info!("Spawning new visual scene for {}", client_id);
                 body_part_map
                     .map
-                    .insert((*client_id, part_to_change.to_string()), id);
+                    .insert((*client_id, new_file_path.to_string()), id);
 
                 // Make player parent of the new spawned scene
                 commands.entity(id).set_parent(*entity);
@@ -276,8 +270,8 @@ fn customize_player(
             }
         } else {
             info!(
-                "Part '{}' for client {} is already current; no changes made",
-                part_to_change, client_id
+                "Visual item '{}' for client {} is already current; no changes made",
+                curr_file_path, client_id
             );
         }
     } else {

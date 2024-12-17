@@ -24,7 +24,8 @@ pub enum Parts {
     Leg,
 }
 
-/// Statig string references I dont expect this variable to change mid system running as I dont see any reason why
+/// Static string references =  dont expect this variable to change mid system running
+/// Technically this are the paths to all available items, just increase this guy to adjust ui button
 const HEAD_PATHS: [&'static str; 2] = [
     "characters/parts/suit_head.glb",
     "characters/parts/soldier_head.glb",
@@ -47,8 +48,8 @@ pub struct ChangeCharEvent {
     pub client_id: ClientId,
     /// Body part specific part that we hope to adjust
     pub body_part: Parts,
-    /// A file path for new part
-    pub path_to_part: String,
+    /// The item that needs to change
+    pub item: Item,
 }
 
 impl Plugin for ClientEguiPlugin {
@@ -148,20 +149,20 @@ fn char_customizer_ui(
                         Parts::Leg => &LEG_PATHS,
                     };
 
-                    // For each part in path, we make a button  capable of sending an event with it is given file_path
-                    for path_to_part in paths.iter() {
-                        // Slicing for pretty :)
-                        let sliced_str = path_to_part
-                            .split("/")
-                            .last()
-                            .unwrap_or(&path_to_part)
-                            .to_string();
+                    let items: Vec<Item> = paths
+                        .iter()
+                        .map(|&path| Item::new_from_filepath(path.clone()))
+                        .collect();
 
-                        if ui.button(sliced_str).clicked() {
+                    // For each item, we make a button  capable of sending an event with it is given file_path
+                    for item in items.iter() {
+                        let item_name = item.name.to_string();
+
+                        if ui.button(item_name).clicked() {
                             let client_id = player_id.id;
                             // Selected button is technically also the definer of what body part we want to change didnt name it differently because of egui context
                             let body_part = selected_button.clone();
-                            send_trigger_event(&mut commands, body_part, path_to_part, client_id);
+                            send_trigger_event(&mut commands, body_part, item, client_id);
                         }
                     }
                 })
@@ -171,21 +172,16 @@ fn char_customizer_ui(
 }
 
 /// Callable function utilized to avoid repetitition in char custumizedr ui
-fn send_trigger_event(
-    commands: &mut Commands,
-    body_part: Parts,
-    path_to_part: &str,
-    client_id: ClientId,
-) {
+fn send_trigger_event(commands: &mut Commands, body_part: Parts, item: &Item, client_id: ClientId) {
     //We dont actually want event here we just wanna trigger observer
     commands.trigger(ChangeCharEvent {
         client_id: client_id,
         body_part: body_part,
-        path_to_part: path_to_part.to_string(),
+        item: item.clone(),
     });
     info!(
         "Change char event sent successfully! Part to change {} client {}",
-        path_to_part, client_id
+        item, client_id
     );
 }
 

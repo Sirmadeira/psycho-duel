@@ -7,6 +7,7 @@ use lightyear::prelude::client::ComponentSyncMode;
 use lightyear::prelude::*;
 use serde::Deserialize;
 use serde::Serialize;
+use std::fmt;
 
 /// Essential struct that marks our player predicted entity.
 #[derive(Component, Reflect, Serialize, Deserialize, PartialEq, Clone)]
@@ -20,43 +21,80 @@ pub struct PlayerId {
     pub id: ClientId,
 }
 
+/// Component that tell me exactly what items that player has available to him
+#[derive(Component, Reflect, Serialize, Deserialize, PartialEq, Debug, Clone)]
+pub struct Inventory {
+    items: HashMap<String, Item>,
+}
+
+/// Item is an abstraction utilized to easy our management of what player has, when it comes to Assets
+/// Things like, guns, visuals, should be items
+#[derive(Reflect, Serialize, Deserialize, PartialEq, Debug, Clone)]
+pub struct Item {
+    /// Name of that item - Mostly used for pretty egui
+    pub name: Name,
+    /// File path - File path to that grab that item via AssetCollections
+    pub file_path: String,
+}
+
+impl Item {
+    /// Creates an item from it is given file path, grabing the last part from slice.
+    pub fn new_from_filepath(file_path: &str) -> Self {
+        let name_str = file_path
+            .split("/")
+            .last()
+            .unwrap_or(&file_path)
+            .to_string();
+        Self {
+            name: Name::new(name_str),
+            file_path: file_path.to_string(),
+        }
+    }
+}
+/// Display trait for item, shows us his name
+impl fmt::Display for Item {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.name)
+    }
+}
+
 /// Essential component utilized to tell me what exactly are the scenes player should have as children
 /// Important- Why servertoclient? Well we wanna validate if everything occured succesfully, if so we are going to change in server via messages
 /// Also to mantain a monolithic player entity
 #[derive(Component, Reflect, Serialize, Deserialize, PartialEq, Debug, Clone)]
 pub struct PlayerVisuals {
     /// Base skeleton to fit into
-    pub skeleton: String,
+    pub skeleton: Item,
     /// Character available head
-    pub head: String,
+    pub head: Item,
     /// Character available torso
-    pub torso: String,
+    pub torso: Item,
     /// Character available legs
-    pub leg: String,
+    pub leg: Item,
     /// Character available weapon
-    pub weapon_1: String,
+    pub weapon_1: Item,
 }
 
 impl Default for PlayerVisuals {
     fn default() -> Self {
         Self {
-            head: String::from("characters/parts/suit_head.glb"),
-            torso: String::from("characters/parts/scifi_torso.glb"),
-            leg: String::from("characters/parts/witch_legs.glb"),
-            weapon_1: String::from("weapons/katana.glb"),
-            skeleton: String::from("characters/parts/main_skeleton.glb"),
+            head: Item::new_from_filepath("characters/parts/suit_head.glb"),
+            torso: Item::new_from_filepath("characters/parts/scifi_torso.glb"),
+            leg: Item::new_from_filepath("characters/parts/witch_legs.glb"),
+            weapon_1: Item::new_from_filepath("weapons/katana.glb"),
+            skeleton: Item::new_from_filepath("characters/parts/main_skeleton.glb"),
         }
     }
 }
 
 impl PlayerVisuals {
     /// Returns an iterator over the visual components. Good iterator for when spawning first the entity
-    pub fn iter_visuals(&self) -> impl Iterator<Item = &String> {
+    pub fn iter_visuals(&self) -> impl Iterator<Item = &Item> {
         vec![&self.head, &self.torso, &self.leg, &self.skeleton].into_iter()
     }
     /// Returns a reference to the visual component corresponding to the given`Parts` enum
     /// Avoids the usage of uncessary match statements
-    pub fn get_visual(&self, part: &Parts) -> &String {
+    pub fn get_visual(&self, part: &Parts) -> &Item {
         match part {
             Parts::Head => &self.head,
             Parts::Torso => &self.torso,
@@ -65,7 +103,7 @@ impl PlayerVisuals {
     }
     /// Returns a mutable reference to the visual component corresponding to the given`Parts` enum
     /// Avoids the usage of uncessary match statements
-    pub fn get_visual_mut(&mut self, part: &Parts) -> &mut String {
+    pub fn get_visual_mut(&mut self, part: &Parts) -> &mut Item {
         match part {
             Parts::Head => &mut self.head,
             Parts::Torso => &mut self.torso,
@@ -111,8 +149,8 @@ pub struct SaveMessage {
     pub change_currency: Option<Currency>,
 }
 
-/// Struct responsible to tell me how much money player have she is gonna have a bunch of mathematical implementations
-/// For ease of use
+/// Component responsible to tell me how much money a specific client id has
+/// It has mathematical function to ease our usage
 #[derive(Component, Debug, Clone, Copy, PartialEq, Serialize, Deserialize, Reflect)]
 pub struct Currency {
     pub amount: f32,
@@ -151,7 +189,9 @@ impl Plugin for ProtocolPlugin {
             .add_prediction(ComponentSyncMode::Once);
         app.register_component::<PlayerVisuals>(ChannelDirection::ServerToClient)
             .add_prediction(ComponentSyncMode::Simple);
-        app.register_component::<Currency>(ChannelDirection::Bidirectional)
+        app.register_component::<Inventory>(ChannelDirection::ServerToClient)
+            .add_prediction(ComponentSyncMode::Simple);
+        app.register_component::<Currency>(ChannelDirection::ServerToClient)
             .add_prediction(ComponentSyncMode::Simple);
         app.register_component::<Name>(ChannelDirection::ServerToClient)
             .add_prediction(ComponentSyncMode::Once)

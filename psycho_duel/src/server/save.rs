@@ -143,8 +143,8 @@ fn check_client_sent_core_information(
                 let mut server_visual = player_visual.get_mut(*player_entity).unwrap();
                 let body_part = &change_visual.body_part;
                 let old_part = server_visual.get_visual_mut(body_part);
-                let new_part = change_visual.path_to_part.clone();
-                *old_part = new_part;
+                let new_item = change_visual.item.clone();
+                *old_part = new_item;
                 new_core_information.player_visuals = server_visual.clone();
             }
 
@@ -162,7 +162,7 @@ fn check_client_sent_core_information(
             if connection_manager
                 .send_message_to_target::<CommonChannel, SaveMessage>(
                     &mut message,
-                    NetworkTarget::All,
+                    NetworkTarget::AllExceptSingle(client_id),
                 )
                 .is_err()
             {
