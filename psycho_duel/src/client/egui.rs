@@ -151,7 +151,7 @@ fn char_customizer_ui(
 
                     let items: Vec<Item> = paths
                         .iter()
-                        .map(|&path| Item::new_from_filepath(path.clone()))
+                        .map(|&path| Item::new_from_filepath(path))
                         .collect();
 
                     // For each item, we make a button  capable of sending an event with it is given file_path

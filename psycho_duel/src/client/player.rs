@@ -140,6 +140,7 @@ fn spawn_visual_scene(
 /// -> If not he will tell that client, he can test it but when he leaves he will enter a rollback state where we reverse him.
 /// -> Why save message? Well because indepently of what happens we will have to save the entire save, might as well make that clear.
 /// -> Why like this? Well to ensure no visual hacks and also to let player test out visuals he doesnt have access to.
+/// -> Why predicted player? Well because we solely want to change predicted entities via client, confirmed are the ones altered by server!
 fn customize_local_player(
     change_char: Trigger<ChangeCharEvent>,
     mut player_visuals: Query<&mut PlayerVisuals, With<Predicted>>,
