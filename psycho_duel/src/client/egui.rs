@@ -59,7 +59,10 @@ impl Plugin for ClientEguiPlugin {
         app.add_event::<ChangeCharEvent>();
 
         //In update by default
-        app.add_systems(Update, (inspector_ui, char_customizer_ui, currency_ui));
+        app.add_systems(
+            Update,
+            (inspector_ui, char_customizer_ui, currency_ui, store_ui),
+        );
     }
 }
 
@@ -237,12 +240,58 @@ fn currency_ui(
 fn store_ui(
     mut contexts: bevy_egui::EguiContexts,
     gltf_collection: Option<Res<GltfCollection>>,
-    player_q: Query<&Inventory, (With<Predicted>, With<Controlled>)>,
+    mut player_q: Query<&mut Inventory, (With<Predicted>, With<Controlled>)>,
+    mut connection_manager: ResMut<ClientConnectionManager>,
 ) {
     // Should only appear if all assets are available and player was replicated
     if let Some(gltf_collection) = gltf_collection {
-        if let Ok(player_q) = player_q.get_single() {
-            // let all_itens =
+        // Player will always have visual items default one that cant be sold
+        // After all we are not gonna spawn an empty base skeleton
+        if let Ok(player_inv) = player_q.get_single_mut() {
+            // Egui context
+            let egui_context = contexts.ctx_mut();
+
+            // CUrrently all of our available items are in gltfcollection
+            let items: Vec<Item> = gltf_collection
+                .gltf_files
+                .keys()
+                .into_iter()
+                .map(|file_path| Item::new_from_filepath(file_path))
+                .collect();
+            egui::Window::new("Store").show(egui_context, |ui| {
+                egui::ScrollArea::both().show(ui, |ui| {
+                    ui.horizontal(|ui| {
+                        // First column for the items you want player to have
+                        ui.vertical(|ui| {
+                            ui.heading("All available items");
+                            for item in items.iter() {
+                                let item_name = item.name.to_string();
+                                if ui.button(item_name).clicked() {
+                                    // Handle button click
+                                }
+                            }
+                        });
+                        // Second column to buy items
+                        ui.vertical(|ui| {
+                            ui.heading("Buy items");
+                            // Checking current player visuals
+                        });
+
+                        // Third column for sell items
+                        ui.vertical(|ui| {
+                            ui.heading("Sell your items");
+                            ui.label("Select an item to sell.");
+                            // Additional UI elements for the second column can go here
+                            for item in player_inv.items.values() {
+                                let item_name = item.name.to_string();
+                                if ui.button(item_name).clicked() {
+                                    // Handle button click
+                                }
+                            }
+                        });
+                    });
+                });
+            });
         }
     }
 }

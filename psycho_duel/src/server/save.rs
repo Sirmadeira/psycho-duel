@@ -156,7 +156,6 @@ fn check_client_sent_core_information(
                 previous_core.currency = *prev_currency;
             }
 
-            save(&core_info_map);
             // Broadcast save message to clients to act upon
             let mut message = message.clone();
             if connection_manager
@@ -168,6 +167,7 @@ fn check_client_sent_core_information(
             {
                 warn!("Even tho server gave the okay couldnt broadcast message to all clients!")
             }
+            save(&core_info_map);
         }
     }
 }

@@ -31,7 +31,7 @@ impl Plugin for ServerPlayerPlugin {
     }
 }
 
-/// Whenever a player connects spawn player entity
+/// Whenever a core information exists spawn player entity
 fn spawn_player_when_core(
     core: Trigger<OnAdd, CoreInformation>,
     player_ids: Query<&PlayerId>,

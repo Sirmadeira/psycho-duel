@@ -24,11 +24,26 @@ pub struct PlayerId {
 /// Component that tell me exactly what items that player has available to him we can easily query it via his UUid
 #[derive(Component, Reflect, Serialize, Deserialize, PartialEq, Debug, Clone, Default)]
 pub struct Inventory {
-    items: HashMap<Uuid, Item>,
+    pub items: HashMap<Uuid, Item>,
 }
 impl Inventory {
-    fn insert_item(&mut self, item: Item) {
-        self.items.insert(item.id, item.clone());
+    /// Creates an empty inventory
+    pub fn empty() -> Self {
+        Self {
+            items: HashMap::new(), // Assuming `items` is a `HashMap`
+        }
+    }
+    /// Insert one sole item in our inventory
+    fn insert_item(&mut self, item: Item) -> &Self {
+        self.items.insert(item.id, item);
+        self
+    }
+    /// Insert multiple items at once in our inventory and return self
+    fn insert_mult_items(&mut self, items: Vec<Item>) -> &mut Self {
+        for item in items {
+            self.items.insert(item.id, item);
+        }
+        self
     }
 }
 
@@ -140,13 +155,21 @@ pub struct CoreInformation {
 }
 
 impl CoreInformation {
-    /// Pass a client id - Get a semi defaulted core
+    /// Pass a client id - Get the default core for new players
     pub fn new(client_id: ClientId) -> Self {
+        // All default player visuals
+        let player_visual_items = PlayerVisuals::default();
+        // Clone here to avoid utilizing same memory space as visuals
+        let default_items: Vec<Item> = player_visual_items.iter_visuals().cloned().collect();
+        // Fill empty inventory with default items
+        let mut empty_inventory = Inventory::empty();
+        empty_inventory.insert_mult_items(default_items);
+
         Self {
             player_id: PlayerId { id: client_id },
             player_visuals: PlayerVisuals::default(),
             currency: Currency::default(),
-            inventory: Inventory::default(),
+            inventory: empty_inventory,
         }
     }
 }
