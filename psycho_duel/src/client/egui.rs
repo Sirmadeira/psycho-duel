@@ -9,6 +9,7 @@ use client::{NetworkingState, Predicted};
 use lightyear::prelude::*;
 use lightyear::shared::replication::components::Controlled;
 
+use super::load_assets::GltfCollection;
 use super::protocol::*;
 use super::CommonChannel;
 /// Client focused egui
@@ -117,66 +118,69 @@ fn inspector_ui(world: &mut World) {
 fn char_customizer_ui(
     mut contexts: bevy_egui::EguiContexts,
     local_player: Query<&PlayerId, (With<Predicted>, With<Controlled>)>,
-    networking_state: Res<State<NetworkingState>>,
     mut selected_button: Local<Parts>,
     mut commands: Commands,
 ) {
-    // Only should appear if connected and replciation ocurred
-    if networking_state.eq(&NetworkingState::Connected) {
-        if let Ok(player_id) = local_player.get_single() {
-            // Egui context
-            let egui_context = contexts.ctx_mut();
+    // Only should appear if replication ocurred
+    if let Ok(player_id) = local_player.get_single() {
+        // Egui context
+        let egui_context = contexts.ctx_mut();
 
-            // Cleaner dereferencing
-            let selected_button = selected_button.deref_mut();
-            egui::Window::new("Char customizer").show(egui_context, |ui| {
-                egui::ScrollArea::both().show(ui, |ui| {
-                    ui.label("Part to change");
-                    // For some unknow reason combobox requires hash id, which I just didnt feel like writing so from empty label it is
-                    egui::ComboBox::from_label("")
-                        .selected_text(format!("{:?}", selected_button))
-                        .show_ui(ui, |ui| {
-                            ui.selectable_value(selected_button, Parts::Head, "Head");
-                            ui.selectable_value(selected_button, Parts::Torso, "Torso");
-                            ui.selectable_value(selected_button, Parts::Leg, "Leg");
-                        });
+        // Cleaner dereferencing
+        let selected_button = selected_button.deref_mut();
+        egui::Window::new("Char customizer").show(egui_context, |ui| {
+            egui::ScrollArea::both().show(ui, |ui| {
+                ui.label("Part to change");
+                // For some unknow reason combobox requires hash id, which I just didnt feel like writing so from empty label it is
+                egui::ComboBox::from_label("")
+                    .selected_text(format!("{:?}", selected_button))
+                    .show_ui(ui, |ui| {
+                        ui.selectable_value(selected_button, Parts::Head, "Head");
+                        ui.selectable_value(selected_button, Parts::Torso, "Torso");
+                        ui.selectable_value(selected_button, Parts::Leg, "Leg");
+                    });
 
-                    ui.label("Available parts");
-                    // Matching pattern to grab pre defined const paths
-                    let paths = match selected_button {
-                        Parts::Head => &HEAD_PATHS,
-                        Parts::Torso => &TORSO_PATHS,
-                        Parts::Leg => &LEG_PATHS,
-                    };
+                ui.label("Available parts");
+                // Matching pattern to grab pre defined const paths
+                let paths = match selected_button {
+                    Parts::Head => &HEAD_PATHS,
+                    Parts::Torso => &TORSO_PATHS,
+                    Parts::Leg => &LEG_PATHS,
+                };
 
-                    let items: Vec<Item> = paths
-                        .iter()
-                        .map(|&path| Item::new_from_filepath(path))
-                        .collect();
+                // Here we intake ref because we dont wannt to consume file path const
+                let items: Vec<Item> = paths
+                    .iter()
+                    .map(|&path| Item::new_from_filepath(path))
+                    .collect();
 
-                    // For each item, we make a button  capable of sending an event with it is given file_path
-                    for item in items.iter() {
-                        let item_name = item.name.to_string();
+                // For each item, we make a button  capable of sending an event with it is given file_path
+                for item in items.iter() {
+                    let item_name = item.name.to_string();
 
-                        if ui.button(item_name).clicked() {
-                            let client_id = player_id.id;
-                            // Selected button is technically also the definer of what body part we want to change didnt name it differently because of egui context
-                            let body_part = selected_button.clone();
-                            send_trigger_event(&mut commands, body_part, item, client_id);
-                        }
+                    if ui.button(item_name).clicked() {
+                        let client_id = player_id.id;
+                        // Selected button is technically also the definer of what body part we want to change didnt name it differently because of egui context
+                        let body_part = &selected_button;
+                        send_trigger_event(&mut commands, body_part, item, client_id);
                     }
-                })
-            });
-        }
+                }
+            })
+        });
     }
 }
 
 /// Callable function utilized to avoid repetitition in char custumizedr ui
-fn send_trigger_event(commands: &mut Commands, body_part: Parts, item: &Item, client_id: ClientId) {
+fn send_trigger_event(
+    commands: &mut Commands,
+    body_part: &Parts,
+    item: &Item,
+    client_id: ClientId,
+) {
     //We dont actually want event here we just wanna trigger observer
     commands.trigger(ChangeCharEvent {
         client_id: client_id,
-        body_part: body_part,
+        body_part: body_part.clone(),
         item: item.clone(),
     });
     info!(
@@ -185,49 +189,60 @@ fn send_trigger_event(commands: &mut Commands, body_part: Parts, item: &Item, cl
     );
 }
 
-/// Egui responsible to test features such as buying , selling, items, gaining currency, losing currency
+/// Egui responsible to test features gaining currency, losing currency
 fn currency_ui(
     mut contexts: bevy_egui::EguiContexts,
     mut player_q: Query<(&PlayerId, &mut Currency), (With<Predicted>, With<Controlled>)>,
     mut connection_manager: ResMut<ClientConnectionManager>,
-    networking_state: Res<State<NetworkingState>>,
 ) {
-    // Only should appear when connected and if replication already ocurred
-    if networking_state.eq(&NetworkingState::Connected) {
-        // It is okay we can mutate locally, nonetheless server will override it via replication if not okaied validation
-        if let Ok((player_id, mut current_currency)) = player_q.get_single_mut() {
-            // Grab primary window ctx
-            let egui_context = contexts.ctx_mut();
-            // Use the egui context
-            egui::Window::new("Currency mechanics").show(egui_context, |ui| {
-                if ui.button("Gain currency").clicked() {
-                    current_currency.add(10.0);
+    // Only should appear if replication already ocurred
+    // It is okay we can mutate locally, nonetheless server will override it via replication if not okaied validation
+    if let Ok((player_id, mut current_currency)) = player_q.get_single_mut() {
+        // Grab primary window ctx
+        let egui_context = contexts.ctx_mut();
+        // Use the egui context
+        egui::Window::new("Currency mechanics").show(egui_context, |ui| {
+            if ui.button("Gain currency").clicked() {
+                current_currency.add(10.0);
 
-                    // Send event here
-                    let _ = connection_manager.send_message::<CommonChannel, SaveMessage>(
-                        &mut SaveMessage {
-                            id: player_id.id,
-                            change_char: None,
-                            change_currency: Some(current_currency.clone()),
-                        },
-                    );
+                // Send event here
+                let _ = connection_manager.send_message::<CommonChannel, SaveMessage>(
+                    &mut SaveMessage {
+                        id: player_id.id,
+                        change_char: None,
+                        change_currency: Some(current_currency.clone()),
+                    },
+                );
+            }
+            if ui.button("Lose currency").clicked() {
+                if current_currency.amount < 0.0 {
+                    warn!("Renember money is everything UNWORTHY mechanic goes here")
                 }
-                if ui.button("Lose currency").clicked() {
-                    if current_currency.amount < 0.0 {
-                        warn!("Renember money is everything UNWORTHY mechanic goes here")
-                    }
-                    // Adjust currency logic and send event here
-                    current_currency.sub(10.0);
+                // Adjust currency logic and send event here
+                current_currency.sub(10.0);
 
-                    let _ = connection_manager.send_message::<CommonChannel, SaveMessage>(
-                        &mut SaveMessage {
-                            id: player_id.id,
-                            change_char: None,
-                            change_currency: Some(current_currency.clone()),
-                        },
-                    );
-                }
-            });
+                let _ = connection_manager.send_message::<CommonChannel, SaveMessage>(
+                    &mut SaveMessage {
+                        id: player_id.id,
+                        change_char: None,
+                        change_currency: Some(current_currency.clone()),
+                    },
+                );
+            }
+        });
+    }
+}
+
+/// Egui representing our store mechanics things like buying items selling them should occur here
+fn store_ui(
+    mut contexts: bevy_egui::EguiContexts,
+    gltf_collection: Option<Res<GltfCollection>>,
+    player_q: Query<&Inventory, (With<Predicted>, With<Controlled>)>,
+) {
+    // Should only appear if all assets are available and player was replicated
+    if let Some(gltf_collection) = gltf_collection {
+        if let Ok(player_q) = player_q.get_single() {
+            // let all_itens =
         }
     }
 }

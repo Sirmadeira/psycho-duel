@@ -63,18 +63,17 @@ fn handle_new_clients(
             commands.spawn(core_information.clone());
             save_info.map.insert(client_id, core_information);
 
-            // We use clone here because ideally we want snaps of our save files also to keep running this in parallel with futures saves
-            save(save_info.clone());
+            // We use references here because you know i am trying to better my clone usage
+            save(&save_info);
         }
     }
 }
 /// A simple function that save in bincode files the adjusted resources CoreSaveInfoMap. Should occur everytime we modify that core resource in code,
 /// Example: User modifies current skin, save!
-fn save(save_info: CoreSaveInfoMap) {
+fn save(save_info_map: &CoreSaveInfoMap) {
     info!("Saving new information!");
     // Unwraps here because I dont see how one would be able to just change a const or a already initialized struct field type
     let mut f = BufWriter::new(File::create(SAVE_FILE_PATH).unwrap());
-    let save_info_map = save_info;
     serialize_into(&mut f, &save_info_map).unwrap();
 }
 
@@ -124,14 +123,12 @@ fn check_client_sent_core_information(
     mut connection_manager: ResMut<ServerConnectionManager>,
 ) {
     for save_message in save_from_client.read() {
-        let mut message = save_message.message().clone();
+        let message = save_message.message();
         let client_id = message.id;
         // First -> Validate optional fields in save_message
         // Second -> Override coreinformation values according to new valuies
         // Third -> Send message to other clients
         if let Some(previous_core) = core_info_map.map.get_mut(&client_id) {
-            let mut new_core_information = previous_core.clone(); // Start with previous core information
-
             // It is basically impossible for player to not be in map
             let player_entity = player_map.map.get(&client_id).unwrap();
 
@@ -141,24 +138,27 @@ fn check_client_sent_core_information(
                 info!("Validation for visual change: {:?}", change_visual);
                 // Mutating confirmed entity in client to follow new old part
                 let mut server_visual = player_visual.get_mut(*player_entity).unwrap();
+                // Grabing part to change
                 let body_part = &change_visual.body_part;
-                let old_part = server_visual.get_visual_mut(body_part);
-                let new_item = change_visual.item.clone();
-                *old_part = new_item;
-                new_core_information.player_visuals = server_visual.clone();
+                let old_item = server_visual.get_visual_mut(body_part);
+                //Mutating internal
+                *old_item = change_visual.item.clone();
+                previous_core.player_visuals = server_visual.clone();
             }
 
             // Validation stage for player currency changes
             if let Some(currency) = &message.change_currency {
                 info!("Validation for currency");
+                // Mutatin confirmed player
                 let mut prev_currency = player_currency.get_mut(*player_entity).unwrap();
                 *prev_currency = *currency;
+                // Overriding previous currency value - We dont have clone here because it is okay to copy
+                previous_core.currency = *prev_currency;
             }
 
-            // After validation stage change core information on map and save
-            *previous_core = new_core_information;
-            save(core_info_map.clone());
+            save(&core_info_map);
             // Broadcast save message to clients to act upon
+            let mut message = message.clone();
             if connection_manager
                 .send_message_to_target::<CommonChannel, SaveMessage>(
                     &mut message,

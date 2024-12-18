@@ -8,7 +8,7 @@ use lightyear::prelude::*;
 use serde::Deserialize;
 use serde::Serialize;
 use std::fmt;
-
+use uuid::Uuid;
 /// Essential struct that marks our player predicted entity.
 #[derive(Component, Reflect, Serialize, Deserialize, PartialEq, Clone)]
 pub struct PlayerMarker;
@@ -21,19 +21,27 @@ pub struct PlayerId {
     pub id: ClientId,
 }
 
-/// Component that tell me exactly what items that player has available to him
-#[derive(Component, Reflect, Serialize, Deserialize, PartialEq, Debug, Clone)]
+/// Component that tell me exactly what items that player has available to him we can easily query it via his UUid
+#[derive(Component, Reflect, Serialize, Deserialize, PartialEq, Debug, Clone, Default)]
 pub struct Inventory {
-    items: HashMap<String, Item>,
+    items: HashMap<Uuid, Item>,
+}
+impl Inventory {
+    fn insert_item(&mut self, item: Item) {
+        self.items.insert(item.id, item.clone());
+    }
 }
 
 /// Item is an abstraction utilized to easy our management of what player has, when it comes to Assets
 /// Things like, guns, visuals, should be items
 #[derive(Reflect, Serialize, Deserialize, PartialEq, Debug, Clone)]
 pub struct Item {
+    /// A unique identifier for our items necessary to make exclusive mechanics, if one day I want to make this display pretty
+    /// Use InspectorEguiImpl
+    pub id: Uuid,
     /// Name of that item - Mostly used for pretty egui
     pub name: Name,
-    /// File path - File path to that grab that item via AssetCollections
+    /// File path - File path to that grab that item via AssetCollections, must outlive it is referebce. Also serialize dislikes lifetimes
     pub file_path: String,
 }
 
@@ -46,6 +54,7 @@ impl Item {
             .unwrap_or(&file_path)
             .to_string();
         Self {
+            id: Uuid::new_v4(),
             name: Name::new(name_str),
             file_path: file_path.to_string(),
         }
@@ -126,6 +135,7 @@ pub struct CoreSaveInfoMap {
 pub struct CoreInformation {
     pub player_id: PlayerId,
     pub player_visuals: PlayerVisuals,
+    pub inventory: Inventory,
     pub currency: Currency,
 }
 
@@ -136,6 +146,7 @@ impl CoreInformation {
             player_id: PlayerId { id: client_id },
             player_visuals: PlayerVisuals::default(),
             currency: Currency::default(),
+            inventory: Inventory::default(),
         }
     }
 }
