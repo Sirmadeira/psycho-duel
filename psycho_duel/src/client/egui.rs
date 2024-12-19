@@ -127,49 +127,49 @@ fn char_customizer_ui(
     // Only should appear if replication ocurred
     if let Ok(player_id) = local_player.get_single() {
         // Egui context
-        let egui_context = contexts.ctx_mut();
+        if let Some(egui_context) = contexts.try_ctx_mut() {
+            // Cleaner dereferencing
+            let selected_button = selected_button.deref_mut();
+            egui::Window::new("Char customizer").show(egui_context, |ui| {
+                egui::ScrollArea::both().show(ui, |ui| {
+                    ui.label("Part to change");
+                    // For some unknow reason combobox requires hash id, which I just didnt feel like writing so from empty label it is
+                    egui::ComboBox::from_label("")
+                        .selected_text(format!("{:?}", selected_button))
+                        .show_ui(ui, |ui| {
+                            ui.selectable_value(selected_button, Parts::Head, "Head");
+                            ui.selectable_value(selected_button, Parts::Torso, "Torso");
+                            ui.selectable_value(selected_button, Parts::Leg, "Leg");
+                        });
 
-        // Cleaner dereferencing
-        let selected_button = selected_button.deref_mut();
-        egui::Window::new("Char customizer").show(egui_context, |ui| {
-            egui::ScrollArea::both().show(ui, |ui| {
-                ui.label("Part to change");
-                // For some unknow reason combobox requires hash id, which I just didnt feel like writing so from empty label it is
-                egui::ComboBox::from_label("")
-                    .selected_text(format!("{:?}", selected_button))
-                    .show_ui(ui, |ui| {
-                        ui.selectable_value(selected_button, Parts::Head, "Head");
-                        ui.selectable_value(selected_button, Parts::Torso, "Torso");
-                        ui.selectable_value(selected_button, Parts::Leg, "Leg");
-                    });
+                    ui.label("Available parts");
+                    // Matching pattern to grab pre defined const paths
+                    let paths = match selected_button {
+                        Parts::Head => &HEAD_PATHS,
+                        Parts::Torso => &TORSO_PATHS,
+                        Parts::Leg => &LEG_PATHS,
+                    };
 
-                ui.label("Available parts");
-                // Matching pattern to grab pre defined const paths
-                let paths = match selected_button {
-                    Parts::Head => &HEAD_PATHS,
-                    Parts::Torso => &TORSO_PATHS,
-                    Parts::Leg => &LEG_PATHS,
-                };
+                    // Here we intake ref because we dont wannt to consume file path const
+                    let items: Vec<Item> = paths
+                        .iter()
+                        .map(|&path| Item::new_from_filepath(path))
+                        .collect();
 
-                // Here we intake ref because we dont wannt to consume file path const
-                let items: Vec<Item> = paths
-                    .iter()
-                    .map(|&path| Item::new_from_filepath(path))
-                    .collect();
+                    // For each item, we make a button  capable of sending an event with it is given file_path
+                    for item in items.iter() {
+                        let item_name = item.name.to_string();
 
-                // For each item, we make a button  capable of sending an event with it is given file_path
-                for item in items.iter() {
-                    let item_name = item.name.to_string();
-
-                    if ui.button(item_name).clicked() {
-                        let client_id = player_id.id;
-                        // Selected button is technically also the definer of what body part we want to change didnt name it differently because of egui context
-                        let body_part = &selected_button;
-                        send_trigger_event(&mut commands, body_part, item, client_id);
+                        if ui.button(item_name).clicked() {
+                            let client_id = player_id.id;
+                            // Selected button is technically also the definer of what body part we want to change didnt name it differently because of egui context
+                            let body_part = &selected_button;
+                            send_trigger_event(&mut commands, body_part, item, client_id);
+                        }
                     }
-                }
-            })
-        });
+                })
+            });
+        }
     }
 }
 
@@ -202,37 +202,38 @@ fn currency_ui(
     // It is okay we can mutate locally, nonetheless server will override it via replication if not okaied validation
     if let Ok((player_id, mut current_currency)) = player_q.get_single_mut() {
         // Grab primary window ctx
-        let egui_context = contexts.ctx_mut();
-        // Use the egui context
-        egui::Window::new("Currency mechanics").show(egui_context, |ui| {
-            if ui.button("Gain currency").clicked() {
-                current_currency.add(10.0);
+        if let Some(egui_context) = contexts.try_ctx_mut() {
+            // Use the egui context
+            egui::Window::new("Currency mechanics").show(egui_context, |ui| {
+                if ui.button("Gain currency").clicked() {
+                    current_currency.add(10.0);
 
-                // Send event here
-                let _ = connection_manager.send_message::<CommonChannel, SaveMessage>(
-                    &mut SaveMessage {
-                        id: player_id.id,
-                        change_char: None,
-                        change_currency: Some(current_currency.clone()),
-                    },
-                );
-            }
-            if ui.button("Lose currency").clicked() {
-                if current_currency.amount < 0.0 {
-                    warn!("Renember money is everything UNWORTHY mechanic goes here")
+                    // Send event here
+                    let _ = connection_manager.send_message::<CommonChannel, SaveMessage>(
+                        &mut SaveMessage {
+                            id: player_id.id,
+                            change_char: None,
+                            change_currency: Some(current_currency.clone()),
+                        },
+                    );
                 }
-                // Adjust currency logic and send event here
-                current_currency.sub(10.0);
+                if ui.button("Lose currency").clicked() {
+                    if current_currency.amount < 0.0 {
+                        warn!("Renember money is everything UNWORTHY mechanic goes here")
+                    }
+                    // Adjust currency logic and send event here
+                    current_currency.sub(10.0);
 
-                let _ = connection_manager.send_message::<CommonChannel, SaveMessage>(
-                    &mut SaveMessage {
-                        id: player_id.id,
-                        change_char: None,
-                        change_currency: Some(current_currency.clone()),
-                    },
-                );
-            }
-        });
+                    let _ = connection_manager.send_message::<CommonChannel, SaveMessage>(
+                        &mut SaveMessage {
+                            id: player_id.id,
+                            change_char: None,
+                            change_currency: Some(current_currency.clone()),
+                        },
+                    );
+                }
+            });
+        }
     }
 }
 
@@ -243,55 +244,74 @@ fn store_ui(
     mut player_q: Query<&mut Inventory, (With<Predicted>, With<Controlled>)>,
     mut connection_manager: ResMut<ClientConnectionManager>,
 ) {
-    // Should only appear if all assets are available and player was replicated
+    // Only show the store if assets are available and the player is replicated
     if let Some(gltf_collection) = gltf_collection {
-        // Player will always have visual items default one that cant be sold
-        // After all we are not gonna spawn an empty base skeleton
-        if let Ok(player_inv) = player_q.get_single_mut() {
+        if let Ok(mut player_inv) = player_q.get_single_mut() {
             // Egui context
-            let egui_context = contexts.ctx_mut();
 
-            // CUrrently all of our available items are in gltfcollection
-            let items: Vec<Item> = gltf_collection
-                .gltf_files
-                .keys()
-                .into_iter()
-                .map(|file_path| Item::new_from_filepath(file_path))
-                .collect();
-            egui::Window::new("Store").show(egui_context, |ui| {
-                egui::ScrollArea::both().show(ui, |ui| {
-                    ui.horizontal(|ui| {
-                        // First column for the items you want player to have
-                        ui.vertical(|ui| {
-                            ui.heading("All available items");
-                            for item in items.iter() {
-                                let item_name = item.name.to_string();
-                                if ui.button(item_name).clicked() {
-                                    // Handle button click
-                                }
-                            }
-                        });
-                        // Second column to buy items
-                        ui.vertical(|ui| {
-                            ui.heading("Buy items");
-                            // Checking current player visuals
-                        });
+            if let Some(egui_context) = contexts.try_ctx_mut() {
+                // Get the available items from the GLTF collection
+                let items: Vec<Item> = gltf_collection
+                    .gltf_files
+                    .keys()
+                    .into_iter()
+                    .map(|file_path| Item::new_from_filepath(file_path))
+                    .collect();
 
-                        // Third column for sell items
-                        ui.vertical(|ui| {
-                            ui.heading("Sell your items");
-                            ui.label("Select an item to sell.");
-                            // Additional UI elements for the second column can go here
-                            for item in player_inv.items.values() {
-                                let item_name = item.name.to_string();
-                                if ui.button(item_name).clicked() {
-                                    // Handle button click
-                                }
-                            }
+                // Render the store UI
+                egui::Window::new("Store").show(egui_context, |ui| {
+                    egui::ScrollArea::both().show(ui, |ui| {
+                        ui.horizontal(|ui| {
+                            // Buy section
+                            render_buy_section(ui, &items, &mut player_inv);
+
+                            // Sell section
+                            render_sell_section(ui, &mut player_inv);
                         });
                     });
                 });
-            });
+            }
         }
     }
+}
+
+// Render the "Buy" section
+fn render_buy_section(ui: &mut egui::Ui, items: &[Item], player_inv: &mut Inventory) {
+    ui.vertical(|ui| {
+        ui.heading("Buy items");
+        for item in items {
+            ui.horizontal(|ui| {
+                // Button to buy the item
+                let item_name = item.name.to_string();
+                if ui.button(item_name).clicked() {
+                    player_inv.insert_item(item.clone());
+                }
+
+                // Item price
+                ui.label(format!("Cost: {}", item.item_type.value()));
+            });
+        }
+    });
+}
+
+// Render the "Sell" section
+fn render_sell_section(ui: &mut egui::Ui, player_inv: &mut Inventory) {
+    ui.vertical(|ui| {
+        ui.heading("Sell your items");
+
+        // Collect inventory items into a temporary vector to avoid borrowing issues
+        let items: Vec<_> = player_inv.items.values().cloned().collect();
+        for item in items {
+            ui.horizontal(|ui| {
+                // Button to sell the item
+                let item_name = item.name.to_string();
+                if ui.button(item_name).clicked() {
+                    player_inv.remove_item(&item);
+                }
+
+                // Item price
+                ui.label(format!("Cost: {}", item.item_type.value()));
+            });
+        }
+    });
 }

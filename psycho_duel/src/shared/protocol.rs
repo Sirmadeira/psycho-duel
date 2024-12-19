@@ -10,6 +10,7 @@ use serde::Serialize;
 use std::fmt;
 use uuid::Uuid;
 /// Component that tell me exactly what items that player has available to him we can easily query it via his UUid
+/// Is worth noting this guy is just a wrapped hashmap with renamed functions but who know perhaps later he will have more to it
 #[derive(Component, Reflect, Serialize, Deserialize, PartialEq, Debug, Clone, Default)]
 pub struct Inventory {
     pub items: HashMap<Uuid, Item>,
@@ -22,15 +23,20 @@ impl Inventory {
         }
     }
     /// Insert one sole item in our inventory
-    fn insert_item(&mut self, item: Item) -> &Self {
+    pub fn insert_item(&mut self, item: Item) -> &Self {
         self.items.insert(item.id, item);
         self
     }
     /// Insert multiple items at once in our inventory and return self
-    fn insert_mult_items(&mut self, items: Vec<Item>) -> &mut Self {
+    pub fn insert_mult_items(&mut self, items: Vec<Item>) -> &mut Self {
         for item in items {
             self.items.insert(item.id, item);
         }
+        self
+    }
+    /// In takes a item and removes it from invetory
+    pub fn remove_item(&mut self, item: &Item) -> &Self {
+        self.items.remove(&item.id);
         self
     }
 }
