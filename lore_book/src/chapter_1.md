@@ -1,15 +1,15 @@
 # Chapter 1 - The Will of the Project 
 <!-- SIDENOTE THESE CHAPTERS ARE PIECES OF LORE -->
 
-Welcome to **Psycho Duel**, the arena awaits you here, you will go beyond, achieve greatness, and KNOW A WORLD *pauses*  
+- Welcome to **Psycho Duel**, the arena awaits you here, you will go beyond, achieve greatness, and KNOW A WORLD *pauses*  
 I am so tired of this... this false... hope?
 
 - What is your name again?  
-- **UNKNOWN**, well it seems you are just like me.  
+- **UNKNOWN**, well it seems you are just like me  **UNKNOWN**.  
 
-Well?! Let’s see, ah yes... You have one sole task **UNKNOWN**: climb the **Tower**.
+Well?! Let’s see, ah yes... You have one sole task **UNKNOWN**, JUST climb the **Tower**. hehe................
 
-**How**  
+-**How**  
 how how how how how how how how how how how how HOW?
 
 **Money**
@@ -55,7 +55,7 @@ But it is so hard. So hard...
 The climb gets harder once you are reaching the top, if there is one...  
 Well, that is it. That is how you climb it.
 
-I hope I helped you. I am not sorry if I couldn’t. After all, you are a—wait, what are we?
+I hope I helped you. I am not sorry if I couldn’t. After all, you are one **OF THEM**?
 
 ---
 
@@ -64,5 +64,5 @@ If you want to **survive**.
 ### Who  
 Who Who Who Who Who Who Who Who? YOU KNOW WHO GODAMMIT! 
 ---
-THE THE THE THE THE THE THE THE ?nuonna, yes.. here he goes again...
+THE THE THE THE THE THE THE THE ?recnuonna. Yes... and as in queue, here he goes again...
 

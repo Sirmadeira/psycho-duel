@@ -160,7 +160,7 @@ fn char_customizer_ui(
                     for item in items.iter() {
                         let item_name = item.name.to_string();
 
-                        if ui.button(item_name).clicked() {
+                        if ui.button(&item_name).clicked() {
                             let client_id = player_id.id;
                             // Selected button is technically also the definer of what body part we want to change didnt name it differently because of egui context
                             let body_part = &selected_button;
@@ -214,13 +214,11 @@ fn currency_ui(
                             id: player_id.id,
                             change_char: None,
                             change_currency: Some(current_currency.clone()),
+                            change_inventory: None,
                         },
                     );
                 }
                 if ui.button("Lose currency").clicked() {
-                    if current_currency.amount < 0.0 {
-                        warn!("Renember money is everything UNWORTHY mechanic goes here")
-                    }
                     // Adjust currency logic and send event here
                     current_currency.sub(10.0);
 
@@ -229,6 +227,7 @@ fn currency_ui(
                             id: player_id.id,
                             change_char: None,
                             change_currency: Some(current_currency.clone()),
+                            change_inventory: None,
                         },
                     );
                 }
@@ -241,12 +240,15 @@ fn currency_ui(
 fn store_ui(
     mut contexts: bevy_egui::EguiContexts,
     gltf_collection: Option<Res<GltfCollection>>,
-    mut player_q: Query<&mut Inventory, (With<Predicted>, With<Controlled>)>,
+    mut player_q: Query<
+        (&PlayerId, &mut Currency, &mut Inventory),
+        (With<Predicted>, With<Controlled>),
+    >,
     mut connection_manager: ResMut<ClientConnectionManager>,
 ) {
     // Only show the store if assets are available and the player is replicated
     if let Some(gltf_collection) = gltf_collection {
-        if let Ok(mut player_inv) = player_q.get_single_mut() {
+        if let Ok((player_id, mut player_money, mut player_inv)) = player_q.get_single_mut() {
             // Egui context
 
             if let Some(egui_context) = contexts.try_ctx_mut() {
@@ -263,10 +265,23 @@ fn store_ui(
                     egui::ScrollArea::both().show(ui, |ui| {
                         ui.horizontal(|ui| {
                             // Buy section
-                            render_buy_section(ui, &items, &mut player_inv);
+                            render_buy_section(
+                                ui,
+                                &items,
+                                &player_id,
+                                &mut player_inv,
+                                &mut player_money,
+                                &mut connection_manager,
+                            );
 
                             // Sell section
-                            render_sell_section(ui, &mut player_inv);
+                            render_sell_section(
+                                ui,
+                                &player_id,
+                                &mut player_inv,
+                                &mut player_money,
+                                &mut connection_manager,
+                            );
                         });
                     });
                 });
@@ -275,27 +290,53 @@ fn store_ui(
     }
 }
 
-// Render the "Buy" section
-fn render_buy_section(ui: &mut egui::Ui, items: &[Item], player_inv: &mut Inventory) {
+/// Render the "Buy" section
+fn render_buy_section(
+    ui: &mut egui::Ui,
+    items: &[Item],
+    player_id: &PlayerId,
+    player_inv: &mut Inventory,
+    player_money: &mut Currency,
+    connection_manager: &mut ResMut<ClientConnectionManager>,
+) {
     ui.vertical(|ui| {
         ui.heading("Buy items");
         for item in items {
             ui.horizontal(|ui| {
                 // Button to buy the item
                 let item_name = item.name.to_string();
-                if ui.button(item_name).clicked() {
+                if ui.button(&item_name).clicked() {
                     player_inv.insert_item(item.clone());
+                    player_money.sub(item.item_type.value());
+                    info!("Bought action, for item {} price {}", item_name, {
+                        item.item_type.value()
+                    })
                 }
 
                 // Item price
                 ui.label(format!("Cost: {}", item.item_type.value()));
+
+                let _ = connection_manager.send_message::<CommonChannel, SaveMessage>(
+                    &mut SaveMessage {
+                        id: player_id.id,
+                        change_char: None,
+                        change_currency: Some(player_money.clone()),
+                        change_inventory: Some(player_inv.clone()),
+                    },
+                );
             });
         }
     });
 }
 
-// Render the "Sell" section
-fn render_sell_section(ui: &mut egui::Ui, player_inv: &mut Inventory) {
+/// Render the "Sell" section
+fn render_sell_section(
+    ui: &mut egui::Ui,
+    player_id: &PlayerId,
+    player_inv: &mut Inventory,
+    player_money: &mut Currency,
+    connection_manager: &mut ResMut<ClientConnectionManager>,
+) {
     ui.vertical(|ui| {
         ui.heading("Sell your items");
 
@@ -305,12 +346,25 @@ fn render_sell_section(ui: &mut egui::Ui, player_inv: &mut Inventory) {
             ui.horizontal(|ui| {
                 // Button to sell the item
                 let item_name = item.name.to_string();
-                if ui.button(item_name).clicked() {
+                if ui.button(&item_name).clicked() {
                     player_inv.remove_item(&item);
+                    player_money.add(item.item_type.value());
+                    info!("Sell action, for item {} price {}", item_name, {
+                        item.item_type.value()
+                    })
                 }
 
                 // Item price
                 ui.label(format!("Cost: {}", item.item_type.value()));
+
+                let _ = connection_manager.send_message::<CommonChannel, SaveMessage>(
+                    &mut SaveMessage {
+                        id: player_id.id,
+                        change_char: None,
+                        change_currency: Some(player_money.clone()),
+                        change_inventory: Some(player_inv.clone()),
+                    },
+                );
             });
         }
     });

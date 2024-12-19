@@ -120,13 +120,14 @@ fn check_client_sent_core_information(
     player_map: Res<ServerClientIdPlayerMap>,
     mut player_visual: Query<&mut PlayerVisuals>,
     mut player_currency: Query<&mut Currency>,
+    mut player_inventory: Query<&mut Inventory>,
     mut connection_manager: ResMut<ServerConnectionManager>,
 ) {
     for save_message in save_from_client.read() {
         let message = save_message.message();
         let client_id = message.id;
         // First -> Validate optional fields in save_message
-        // Second -> Override coreinformation values according to new valuies
+        // Second -> Override coreinformation values according to new values
         // Third -> Send message to other clients
         if let Some(previous_core) = core_info_map.map.get_mut(&client_id) {
             // It is basically impossible for player to not be in map
@@ -134,16 +135,19 @@ fn check_client_sent_core_information(
 
             // Validation stage for visual changes - Skip here if he doesnt pass validation
             if let Some(change_visual) = &message.change_char {
-                // Perform any validation logic here
-                info!("Validation for visual change: {:?}", change_visual);
-                // Mutating confirmed entity in client to follow new old part
                 let mut server_visual = player_visual.get_mut(*player_entity).unwrap();
-                // Grabing part to change
+                let player_inventory = player_inventory.get(*player_entity).unwrap();
                 let body_part = &change_visual.body_part;
                 let old_item = server_visual.get_visual_mut(body_part);
-                //Mutating internal
-                *old_item = change_visual.item.clone();
-                previous_core.player_visuals = server_visual.clone();
+                let new_item = &change_visual.item;
+                info!("Validation for visual change: {:?}", change_visual);
+                if let Some(_) = player_inventory.items.get(&new_item.id) {
+                    //Mutating previous core
+                    *old_item = new_item.clone();
+                    previous_core.player_visuals = server_visual.clone();
+                } else {
+                    warn!("Oh how it sucks to be poor! TODO - Rollback mechanic")
+                }
             }
 
             // Validation stage for player currency changes
@@ -152,8 +156,18 @@ fn check_client_sent_core_information(
                 // Mutatin confirmed player
                 let mut prev_currency = player_currency.get_mut(*player_entity).unwrap();
                 *prev_currency = *currency;
+                if prev_currency.amount < 0.0 {
+                    warn!("Renember money is everything TODO UNWORTHY SCUM goes here")
+                }
                 // Overriding previous currency value - We dont have clone here because it is okay to copy
                 previous_core.currency = *prev_currency;
+            }
+
+            if let Some(inventory) = &message.change_inventory {
+                info!("Validation for inventory ocurring");
+                let mut prev_inventory = player_inventory.get_mut(*player_entity).unwrap();
+                *prev_inventory = inventory.clone();
+                previous_core.inventory = inventory.clone();
             }
 
             // Broadcast save message to clients to act upon

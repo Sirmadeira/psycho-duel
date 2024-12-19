@@ -245,8 +245,12 @@ impl CoreInformation {
 #[derive(Event, Serialize, Deserialize, Clone, PartialEq)]
 pub struct SaveMessage {
     pub id: ClientId,
+    /// Should be filled if there was an action in client that changed that character visual
     pub change_char: Option<ChangeCharEvent>,
+    /// Should be filled if there was an action that changed it is currency
     pub change_currency: Option<Currency>,
+    /// Should occur whenever our inventory changes via buy or sell actions
+    pub change_inventory: Option<Inventory>,
 }
 
 /// Centralization plugin - Defines how our component will be synced (from server to client or client to server or bidirectional)

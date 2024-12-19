@@ -6,7 +6,7 @@ Welcome to the technical README for our project infrastructure. This document ou
 
 ## Fixes for weird bugs
 
-In this section I shall alocate all the weird bug I ran into and their solution.
+In this section I shall alocate all the weird bugs I ran into and their solutions.
 1. New systems simply not running - That is most of the time a brain fart move, you probably forgot to add plugin.
 2. Weird lightyear bugs - To be quite sincere lightyear is very stable, just be SUPER CAREFULL with your imports. In server, import server structs, in client client structs, in shared shared structs.
 

@@ -174,6 +174,7 @@ fn customize_local_player(
             id: *client_id,
             change_char: Some(event.clone()),
             change_currency: None,
+            change_inventory: None,
         })
         .is_err()
     {
