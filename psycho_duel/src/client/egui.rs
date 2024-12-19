@@ -310,20 +310,19 @@ fn render_buy_section(
                     player_money.sub(item.item_type.value());
                     info!("Bought action, for item {} price {}", item_name, {
                         item.item_type.value()
-                    })
+                    });
+                    let _ = connection_manager.send_message::<CommonChannel, SaveMessage>(
+                        &mut SaveMessage {
+                            id: player_id.id,
+                            change_char: None,
+                            change_currency: Some(player_money.clone()),
+                            change_inventory: Some(player_inv.clone()),
+                        },
+                    );
                 }
 
                 // Item price
                 ui.label(format!("Cost: {}", item.item_type.value()));
-
-                let _ = connection_manager.send_message::<CommonChannel, SaveMessage>(
-                    &mut SaveMessage {
-                        id: player_id.id,
-                        change_char: None,
-                        change_currency: Some(player_money.clone()),
-                        change_inventory: Some(player_inv.clone()),
-                    },
-                );
             });
         }
     });
@@ -351,20 +350,20 @@ fn render_sell_section(
                     player_money.add(item.item_type.value());
                     info!("Sell action, for item {} price {}", item_name, {
                         item.item_type.value()
-                    })
+                    });
+
+                    let _ = connection_manager.send_message::<CommonChannel, SaveMessage>(
+                        &mut SaveMessage {
+                            id: player_id.id,
+                            change_char: None,
+                            change_currency: Some(player_money.clone()),
+                            change_inventory: Some(player_inv.clone()),
+                        },
+                    );
                 }
 
                 // Item price
                 ui.label(format!("Cost: {}", item.item_type.value()));
-
-                let _ = connection_manager.send_message::<CommonChannel, SaveMessage>(
-                    &mut SaveMessage {
-                        id: player_id.id,
-                        change_char: None,
-                        change_currency: Some(player_money.clone()),
-                        change_inventory: Some(player_inv.clone()),
-                    },
-                );
             });
         }
     });

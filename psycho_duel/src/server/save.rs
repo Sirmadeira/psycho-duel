@@ -1,3 +1,4 @@
+use crate::client::egui::ChangeCharEvent;
 use crate::server::protocol::*;
 use bevy::prelude::*;
 use bincode::{deserialize_from, serialize_into};
@@ -112,8 +113,9 @@ fn create_or_read_save_file(mut commands: Commands) {
     }
 }
 
-/// This guy is gonna receive the sent save messages from client, and check if such action can be or not executed
-/// If not, he is not gonna update confirmed after that client validates_predicted_confirmed should act accordingly to the mechanic
+/// First - Check save messages optional field sent by client
+/// Second - If they can occur he mutates server entity and by definition confirmed, if not, rollback mechanics - TODO
+/// Third - Save new informations
 fn check_client_sent_core_information(
     mut save_from_client: EventReader<MessageEvent<SaveMessage>>,
     mut core_info_map: ResMut<CoreSaveInfoMap>,
@@ -126,52 +128,37 @@ fn check_client_sent_core_information(
     for save_message in save_from_client.read() {
         let message = save_message.message();
         let client_id = message.id;
-        // First -> Validate optional fields in save_message
-        // Second -> Override coreinformation values according to new values
-        // Third -> Send message to other clients
-        if let Some(previous_core) = core_info_map.map.get_mut(&client_id) {
-            // It is basically impossible for player to not be in map
+
+        if let Some(mut previous_core) = core_info_map.map.get_mut(&client_id) {
             let player_entity = player_map.map.get(&client_id).unwrap();
 
-            // Validation stage for visual changes - Skip here if he doesnt pass validation
-            if let Some(change_visual) = &message.change_char {
-                let mut server_visual = player_visual.get_mut(*player_entity).unwrap();
-                let player_inventory = player_inventory.get(*player_entity).unwrap();
-                let body_part = &change_visual.body_part;
-                let old_item = server_visual.get_visual_mut(body_part);
-                let new_item = &change_visual.item;
-                info!("Validation for visual change: {:?}", change_visual);
-                if let Some(_) = player_inventory.items.get(&new_item.id) {
-                    //Mutating previous core
-                    *old_item = new_item.clone();
-                    previous_core.player_visuals = server_visual.clone();
-                } else {
-                    warn!("Oh how it sucks to be poor! TODO - Rollback mechanic")
-                }
-            }
+            // Handle visual changes
+            handle_visual_changes(
+                &message.change_char,
+                &mut previous_core,
+                &mut player_visual,
+                &player_inventory,
+                *player_entity,
+            );
 
-            // Validation stage for player currency changes
-            if let Some(currency) = &message.change_currency {
-                info!("Validation for currency");
-                // Mutatin confirmed player
-                let mut prev_currency = player_currency.get_mut(*player_entity).unwrap();
-                *prev_currency = *currency;
-                if prev_currency.amount < 0.0 {
-                    warn!("Renember money is everything TODO UNWORTHY SCUM goes here")
-                }
-                // Overriding previous currency value - We dont have clone here because it is okay to copy
-                previous_core.currency = *prev_currency;
-            }
+            // Handle currency changes
+            handle_currency_changes(
+                &message.change_currency,
+                previous_core,
+                &mut player_currency,
+                *player_entity,
+            );
 
-            if let Some(inventory) = &message.change_inventory {
-                info!("Validation for inventory ocurring");
-                let mut prev_inventory = player_inventory.get_mut(*player_entity).unwrap();
-                *prev_inventory = inventory.clone();
-                previous_core.inventory = inventory.clone();
-            }
+            // Handle inventory changes
+            handle_inventory_changes(
+                &message.change_inventory,
+                previous_core,
+                &mut player_inventory,
+                *player_entity,
+            );
 
-            // Broadcast save message to clients to act upon
-            let mut message = message.clone();
+            let mut message = save_message.message().clone();
+            // Broadcast save message
             if connection_manager
                 .send_message_to_target::<CommonChannel, SaveMessage>(
                     &mut message,
@@ -181,7 +168,64 @@ fn check_client_sent_core_information(
             {
                 warn!("Even tho server gave the okay couldnt broadcast message to all clients!")
             }
+
+            // Save core information
             save(&core_info_map);
         }
+    }
+}
+
+fn handle_visual_changes(
+    change_char: &Option<ChangeCharEvent>,
+    previous_core: &mut CoreInformation,
+    player_visual: &mut Query<&mut PlayerVisuals>,
+    player_inventory: &Query<&mut Inventory>,
+    player_entity: Entity,
+) {
+    if let Some(change_visual) = change_char {
+        let mut server_visual = player_visual.get_mut(player_entity).unwrap();
+        let player_inventory = player_inventory.get(player_entity).unwrap();
+        let body_part = &change_visual.body_part;
+        let old_item = server_visual.get_visual_mut(body_part);
+        let new_item = &change_visual.item;
+
+        info!("Validating visual change: {:?}", change_visual);
+        if player_inventory.items.get(&new_item.id).is_some() {
+            *old_item = new_item.clone();
+            previous_core.player_visuals = server_visual.clone();
+        } else {
+            warn!("Validation failed: insufficient inventory. TODO: Rollback mechanic");
+        }
+    }
+}
+
+fn handle_currency_changes(
+    change_currency: &Option<Currency>,
+    previous_core: &mut CoreInformation,
+    player_currency: &mut Query<&mut Currency>,
+    player_entity: Entity,
+) {
+    if let Some(currency) = change_currency {
+        info!("Validating currency change");
+        let mut prev_currency = player_currency.get_mut(player_entity).unwrap();
+        if currency.amount < 0.0 {
+            warn!("Validation failed: negative currency. TODO: Handle negative currency");
+        }
+        *prev_currency = *currency;
+        previous_core.currency = *prev_currency;
+    }
+}
+
+fn handle_inventory_changes(
+    change_inventory: &Option<Inventory>,
+    previous_core: &mut CoreInformation,
+    player_inventory: &mut Query<&mut Inventory>,
+    player_entity: Entity,
+) {
+    if let Some(inventory) = change_inventory {
+        info!("Validating inventory change");
+        let mut prev_inventory = player_inventory.get_mut(player_entity).unwrap();
+        *prev_inventory = inventory.clone();
+        previous_core.inventory = inventory.clone();
     }
 }
