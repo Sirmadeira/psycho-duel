@@ -5,7 +5,7 @@ use crate::shared::protocol::Currency;
 use bevy::prelude::*;
 use bevy::window::PrimaryWindow;
 use bevy_egui::{egui, EguiContext};
-use client::{NetworkingState, Predicted};
+use client::Predicted;
 use lightyear::prelude::*;
 use lightyear::shared::replication::components::Controlled;
 
@@ -28,18 +28,18 @@ pub enum Parts {
 /// Static string references =  dont expect this variable to change mid system running
 /// Technically this are the paths to all available items, just increase this guy to adjust ui button
 const HEAD_PATHS: [&'static str; 2] = [
-    "characters/parts/suit_head.glb",
-    "characters/parts/soldier_head.glb",
+    "characters/visual_parts/suit_head.glb",
+    "characters/visual_parts/soldier_head.glb",
 ];
 
 const TORSO_PATHS: [&'static str; 2] = [
-    "characters/parts/scifi_torso.glb",
-    "characters/parts/soldier_torso.glb",
+    "characters/visual_parts/scifi_torso.glb",
+    "characters/visual_parts/soldier_torso.glb",
 ];
 
 const LEG_PATHS: [&'static str; 2] = [
-    "characters/parts/witch_legs.glb",
-    "characters/parts/soldier_legs.glb",
+    "characters/visual_parts/witch_legs.glb",
+    "characters/visual_parts/soldier_legs.glb",
 ];
 
 /// Carrier of information usefull for our char customizer
@@ -205,6 +205,7 @@ fn currency_ui(
         if let Some(egui_context) = contexts.try_ctx_mut() {
             // Use the egui context
             egui::Window::new("Currency mechanics").show(egui_context, |ui| {
+                ui.heading(format!("Total amount {}", current_currency.amount));
                 if ui.button("Gain currency").clicked() {
                     current_currency.add(10.0);
 

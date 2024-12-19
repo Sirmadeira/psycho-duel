@@ -133,7 +133,7 @@ fn check_client_sent_core_information(
             let player_entity = player_map.map.get(&client_id).unwrap();
 
             // Handle visual changes
-            handle_visual_changes(
+            validate_visual_change(
                 &message.change_char,
                 &mut previous_core,
                 &mut player_visual,
@@ -142,7 +142,7 @@ fn check_client_sent_core_information(
             );
 
             // Handle currency changes
-            handle_currency_changes(
+            validate_currency_change(
                 &message.change_currency,
                 previous_core,
                 &mut player_currency,
@@ -150,7 +150,7 @@ fn check_client_sent_core_information(
             );
 
             // Handle inventory changes
-            handle_inventory_changes(
+            validate_inventory_change(
                 &message.change_inventory,
                 previous_core,
                 &mut player_inventory,
@@ -175,7 +175,7 @@ fn check_client_sent_core_information(
     }
 }
 
-fn handle_visual_changes(
+fn validate_visual_change(
     change_char: &Option<ChangeCharEvent>,
     previous_core: &mut CoreInformation,
     player_visual: &mut Query<&mut PlayerVisuals>,
@@ -188,25 +188,24 @@ fn handle_visual_changes(
         let body_part = &change_visual.body_part;
         let old_item = server_visual.get_visual_mut(body_part);
         let new_item = &change_visual.item;
-
-        info!("Validating visual change: {:?}", change_visual);
         if player_inventory.items.get(&new_item.id).is_some() {
             *old_item = new_item.clone();
             previous_core.player_visuals = server_visual.clone();
         } else {
+            *old_item = new_item.clone();
+            previous_core.player_visuals = server_visual.clone();
             warn!("Validation failed: insufficient inventory. TODO: Rollback mechanic");
         }
     }
 }
 
-fn handle_currency_changes(
+fn validate_currency_change(
     change_currency: &Option<Currency>,
     previous_core: &mut CoreInformation,
     player_currency: &mut Query<&mut Currency>,
     player_entity: Entity,
 ) {
     if let Some(currency) = change_currency {
-        info!("Validating currency change");
         let mut prev_currency = player_currency.get_mut(player_entity).unwrap();
         if currency.amount < 0.0 {
             warn!("Validation failed: negative currency. TODO: Handle negative currency");
@@ -216,14 +215,13 @@ fn handle_currency_changes(
     }
 }
 
-fn handle_inventory_changes(
+fn validate_inventory_change(
     change_inventory: &Option<Inventory>,
     previous_core: &mut CoreInformation,
     player_inventory: &mut Query<&mut Inventory>,
     player_entity: Entity,
 ) {
     if let Some(inventory) = change_inventory {
-        info!("Validating inventory change");
         let mut prev_inventory = player_inventory.get_mut(player_entity).unwrap();
         *prev_inventory = inventory.clone();
         previous_core.inventory = inventory.clone();
