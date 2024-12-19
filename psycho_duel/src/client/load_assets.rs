@@ -19,16 +19,16 @@ pub struct GltfCollection {
             // Full characters - This guy is off for now to avoid annoying warning
             // "characters/character_mesh.glb",
             // Heads
-            "characters/parts/suit_head.glb",
-            "characters/parts/soldier_head.glb",
+            "characters/visual_parts/suit_head.glb",
+            "characters/visual_parts/soldier_head.glb",
             // Torsos
-            "characters/parts/scifi_torso.glb",
-            "characters/parts/soldier_torso.glb",
+            "characters/visual_parts/scifi_torso.glb",
+            "characters/visual_parts/soldier_torso.glb",
             // Legs
-            "characters/parts/witch_legs.glb",
-            "characters/parts/soldier_legs.glb",
+            "characters/visual_parts/witch_legs.glb",
+            "characters/visual_parts/soldier_legs.glb",
             //Skeletons
-            "characters/parts/main_skeleton.glb"
+            "characters/anim_skeletons/main_skeleton.glb"
         ),
         collection(typed, mapped)
     )]

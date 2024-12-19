@@ -9,18 +9,6 @@ use serde::Deserialize;
 use serde::Serialize;
 use std::fmt;
 use uuid::Uuid;
-/// Essential struct that marks our player predicted entity.
-#[derive(Component, Reflect, Serialize, Deserialize, PartialEq, Clone)]
-pub struct PlayerMarker;
-
-/// Points out who is the client id of the given player entity.
-/// IMPORTANT- Every entity that is reasonably used, should have similar identifiers
-#[derive(Component, Reflect, Serialize, Deserialize, PartialEq, Debug, Clone)]
-pub struct PlayerId {
-    /// Base client id of this player
-    pub id: ClientId,
-}
-
 /// Component that tell me exactly what items that player has available to him we can easily query it via his UUid
 #[derive(Component, Reflect, Serialize, Deserialize, PartialEq, Debug, Clone, Default)]
 pub struct Inventory {
@@ -58,6 +46,8 @@ pub struct Item {
     pub name: Name,
     /// File path - File path to that grab that item via AssetCollections, must outlive it is referebce. Also serialize dislikes lifetimes
     pub file_path: String,
+    /// Item type shall give me additional information like value and so on
+    pub item_type: ItemType,
 }
 
 impl Item {
@@ -68,18 +58,88 @@ impl Item {
             .last()
             .unwrap_or(&file_path)
             .to_string();
+
+        let item_type = ItemType::type_from_filepath(file_path);
+
         Self {
             id: Uuid::new_v4(),
             name: Name::new(name_str),
             file_path: file_path.to_string(),
+            item_type: item_type,
         }
     }
 }
-/// Display trait for item, shows us his name
+/// Display trait for item, shows us his name made for pretty :)
 impl fmt::Display for Item {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.name)
     }
+}
+
+/// Tell me the exact type of that item, perhaps later we can make unique keys for each one
+#[derive(Debug, Serialize, Deserialize, Reflect, PartialEq, Eq, Clone)]
+pub enum ItemType {
+    Visual,
+    Weapon,
+    Skeleton,
+}
+
+impl ItemType {
+    /// That item type value
+    pub fn value(&self) -> f32 {
+        match self {
+            ItemType::Visual => 1.0,
+            ItemType::Skeleton => 100.0,
+            ItemType::Weapon => 10.0,
+        }
+    }
+    /// Return the item type according to the given father folder
+    pub fn type_from_filepath(file_path: &str) -> Self {
+        if file_path.contains("visual_parts") {
+            ItemType::Visual
+        } else if file_path.contains("weapon") {
+            ItemType::Weapon
+        } else if file_path.contains("anim_skeletons") {
+            ItemType::Skeleton
+        } else {
+            // SPOOKY SPOOKY SKELETONS running down your spine
+            ItemType::Skeleton
+        }
+    }
+}
+
+/// Component responsible to tell me how much money a specific client id has
+/// It has mathematical function to ease our usage
+#[derive(Component, Debug, Clone, Copy, PartialEq, Serialize, Deserialize, Reflect)]
+pub struct Currency {
+    pub amount: f32,
+}
+
+impl Default for Currency {
+    fn default() -> Self {
+        Self { amount: 1.0 }
+    }
+}
+
+impl Currency {
+    pub fn add(&mut self, value: f32) {
+        self.amount += value;
+    }
+    pub fn sub(&mut self, value: f32) {
+        self.amount -= value;
+    }
+}
+
+/// Essential struct that marks our player predicted entity.
+#[derive(Component, Reflect, Serialize, Deserialize, PartialEq, Clone)]
+pub struct PlayerMarker;
+
+/// Points out who is the client id of the given player entity.
+/// IMPORTANT- Every entity that is reasonably used, should have similar identifiers
+#[derive(Component, Reflect, Serialize, Deserialize, PartialEq, Debug, Clone)]
+pub struct PlayerId {
+    /// Base client id of this player
+    pub id: ClientId,
 }
 
 /// Essential component utilized to tell me what exactly are the scenes player should have as children
@@ -102,11 +162,11 @@ pub struct PlayerVisuals {
 impl Default for PlayerVisuals {
     fn default() -> Self {
         Self {
-            head: Item::new_from_filepath("characters/parts/suit_head.glb"),
-            torso: Item::new_from_filepath("characters/parts/scifi_torso.glb"),
-            leg: Item::new_from_filepath("characters/parts/witch_legs.glb"),
+            head: Item::new_from_filepath("characters/visual_parts/suit_head.glb"),
+            torso: Item::new_from_filepath("characters/visual_parts/scifi_torso.glb"),
+            leg: Item::new_from_filepath("characters/visual_parts/witch_legs.glb"),
             weapon_1: Item::new_from_filepath("weapons/katana.glb"),
-            skeleton: Item::new_from_filepath("characters/parts/main_skeleton.glb"),
+            skeleton: Item::new_from_filepath("characters/anim_skeletons/main_skeleton.glb"),
         }
     }
 }
@@ -181,28 +241,6 @@ pub struct SaveMessage {
     pub id: ClientId,
     pub change_char: Option<ChangeCharEvent>,
     pub change_currency: Option<Currency>,
-}
-
-/// Component responsible to tell me how much money a specific client id has
-/// It has mathematical function to ease our usage
-#[derive(Component, Debug, Clone, Copy, PartialEq, Serialize, Deserialize, Reflect)]
-pub struct Currency {
-    pub amount: f32,
-}
-
-impl Default for Currency {
-    fn default() -> Self {
-        Self { amount: 1.0 }
-    }
-}
-
-impl Currency {
-    pub fn add(&mut self, value: f32) {
-        self.amount += value;
-    }
-    pub fn sub(&mut self, value: f32) {
-        self.amount -= value;
-    }
 }
 
 /// Centralization plugin - Defines how our component will be synced (from server to client or client to server or bidirectional)
