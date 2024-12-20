@@ -306,13 +306,13 @@ fn move_player(
         (&ActionState<PlayerActions>, &mut Transform),
         (With<Predicted>, With<Controlled>),
     >,
-    time: Res<Time>,
 ) {
     for (player_action, mut transform) in player_action.iter_mut() {
         // You know only act when we actually have something to do
         if !player_action.get_pressed().is_empty() {
+            // Make this shared
             if player_action.pressed(&PlayerActions::Forward) {
-                transform.translation += Vec3::new(0.0, 0.0, 1.0) * time.delta_seconds();
+                transform.translation += Vec3::new(0.0, 0.0, 0.1);
             }
         }
     }

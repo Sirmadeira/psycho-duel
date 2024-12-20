@@ -154,13 +154,10 @@ pub fn replicate_inputs(
 }
 
 /// When player action is active - Do action
-fn move_player(
-    mut player_action: Query<(&ActionState<PlayerActions>, &mut Transform)>,
-    time: Res<Time>,
-) {
+fn move_player(mut player_action: Query<(&ActionState<PlayerActions>, &mut Transform)>) {
     for (player_action, mut transform) in player_action.iter_mut() {
         if player_action.pressed(&PlayerActions::Forward) {
-            transform.translation += Vec3::new(0.0, 0.0, 1.0) * time.delta_seconds();
+            transform.translation += Vec3::new(0.0, 0.0, 0.1);
         }
     }
 }
