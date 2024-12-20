@@ -4,6 +4,7 @@ use crate::shared::ClientId;
 use bevy::prelude::*;
 use bevy::utils::HashMap;
 use leafwing_input_manager::prelude::*;
+use lightyear::client::components::LerpFn;
 use lightyear::prelude::client::ComponentSyncMode;
 use lightyear::prelude::*;
 use serde::{Deserialize, Serialize};
@@ -326,7 +327,8 @@ impl Plugin for ProtocolPlugin {
 
         // Okay this guys gets it is own comment because if we fuck him up we screwed
         app.register_component::<Transform>(ChannelDirection::ServerToClient)
-            .add_prediction(ComponentSyncMode::Full);
+            .add_prediction(ComponentSyncMode::Full)
+            .add_correction_fn(TransformLinearInterpolation::lerp);
 
         // Replicated resources -  The workflow for replicated resources is as follows
         //-> First - Register in shared, as he is supposed to exist both in client and server
@@ -344,5 +346,28 @@ impl Plugin for ProtocolPlugin {
         app.register_type::<PlayerId>();
         app.register_type::<PlayerVisuals>();
         app.register_type::<CoreSaveInfoMap>();
+    }
+}
+
+pub struct TransformLinearInterpolation;
+
+impl LerpFn<Transform> for TransformLinearInterpolation {
+    fn lerp(start: &Transform, other: &Transform, t: f32) -> Transform {
+        let translation = start.translation * (1.0 - t) + other.translation * t;
+        let rotation = start.rotation.slerp(other.rotation, t);
+        let scale = start.scale * (1.0 - t) + other.scale * t;
+        let res = Transform {
+            translation,
+            rotation,
+            scale,
+        };
+        trace!(
+            "position lerp: start: {:?} end: {:?} t: {} res: {:?}",
+            start,
+            other,
+            t,
+            res
+        );
+        res
     }
 }
