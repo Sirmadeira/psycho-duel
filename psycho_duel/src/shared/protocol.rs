@@ -204,6 +204,7 @@ impl PlayerVisuals {
 }
 /// Abstraction - Utilized to tell me what is the current action of player, gonna be essential for animations and movement
 /// Unfortunately he is not inserted via protocol, although we could treat him as a component. Why? Because of reasons!
+/// I think it has something to do with action state which is the actual interesting component.
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Reflect, Clone, Copy, Hash)]
 pub enum PlayerActions {
     /// Forward direction
@@ -214,8 +215,6 @@ pub enum PlayerActions {
     Left,
     /// Goes in the cam.right direction
     Right,
-    /// Actual carries of the given vec2 - He remains empty we fill him according to what direction we wanna give
-    Direction,
 }
 
 impl Actionlike for PlayerActions {
@@ -225,13 +224,12 @@ impl Actionlike for PlayerActions {
             Self::Backward => InputControlKind::Button,
             Self::Left => InputControlKind::Button,
             Self::Right => InputControlKind::Button,
-            Self::Direction => InputControlKind::DualAxis,
         }
     }
 }
 
 impl PlayerActions {
-    /// Return the default input map for playert actions. A usefull way of aligning both client and server with the same default input map
+    /// Return the default input map for that player actions. A usefull way of aligning both client and server with the same default input map
     pub fn default_input_map() -> InputMap<Self> {
         let input_map = InputMap::default()
             .with(Self::Forward, KeyCode::KeyW)

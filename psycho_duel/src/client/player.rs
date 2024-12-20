@@ -4,11 +4,16 @@ use super::{
     protocol::{PlayerId, PlayerMarker, PlayerVisuals},
     ClientAppState,
 };
-use crate::shared::protocol::*;
 use crate::shared::CommonChannel;
-use bevy::{prelude::*, utils::HashMap};
-use lightyear::prelude::*;
+use crate::shared::{player, protocol::*};
+use bevy::{prelude::*, transform::commands, utils::HashMap};
+use leafwing_input_manager::prelude::*;
+use lightyear::{
+    client::input::leafwing::InputSystemSet, prelude::*,
+    shared::replication::components::Controlled,
+};
 use lightyear::{client::prediction::Predicted, shared::events::components::MessageEvent};
+
 /// Centralization plugin - Everything correlated to player shall be inserted here
 pub struct ClientPlayerPlugin;
 
@@ -28,10 +33,6 @@ pub struct BodyPartMap {
     pub map: HashMap<(ClientId, String), Entity>,
 }
 
-/// Event only executed once we manage to mutate the player visual field - Wait 0.15
-// #[derive(Event)]
-// pub struct TransferAnimations;
-
 impl Plugin for ClientPlayerPlugin {
     fn build(&self, app: &mut App) {
         // Init resources
@@ -47,8 +48,14 @@ impl Plugin for ClientPlayerPlugin {
         // In observe because ideally this should be stateless
         app.observe(customize_local_player);
 
-        // In update because observer dont work so well with networked
+        // In update because observer tend to be unstable (adds component in a disorderly fashion)
         app.add_systems(Update, customize_player_on_other_clients);
+
+        // In update because we wanna keep checking this all the time when we do lobbies
+        app.add_systems(Update, insert_input_map);
+
+        // Fixed update because input systems should be frame unrelated
+        app.add_systems(FixedUpdate, move_player);
 
         // Debug
         app.register_type::<ClientIdPlayerMap>();
@@ -281,5 +288,36 @@ fn customize_player(
             "Something went terribly wrong; couldn't find client_id {} player entity",
             client_id
         );
+    }
+}
+
+/// Whenever we get a predicted entity that is controlled we add the input map unto it
+fn insert_input_map(
+    query: Query<(Entity, Has<Controlled>), Added<Predicted>>,
+    mut commands: Commands,
+) {
+    for (entity, is_controlled) in query.iter() {
+        if is_controlled {
+            commands
+                .entity(entity)
+                .insert(PlayerActions::default_input_map());
+        }
+    }
+}
+
+/// Move player solely moves the predicted controlled player, later server will also give you the true position
+fn move_player(
+    mut player_action: Query<
+        (&ActionState<PlayerActions>, &mut Transform),
+        (With<Predicted>, With<Controlled>),
+    >,
+) {
+    for (player_action, mut transform) in player_action.iter_mut() {
+        // You know only act when we actually have something to do
+        if !player_action.get_pressed().is_empty() {
+            if player_action.just_pressed(&PlayerActions::Forward) {
+                transform.translation += Vec3::new(0.0, 0.0, 1.0)
+            }
+        }
     }
 }

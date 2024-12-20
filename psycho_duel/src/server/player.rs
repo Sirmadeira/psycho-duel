@@ -1,15 +1,11 @@
-use std::ops::DerefMut;
-
 use crate::server::ClientId;
-use crate::shared::protocol::PlayerId;
+use crate::shared::protocol::*;
 use bevy::prelude::*;
-use bevy::transform::commands;
 use bevy::utils::HashMap;
+use leafwing_input_manager::prelude::*;
 use lightyear::prelude::server::{ControlledBy, Lifetime, Replicate, SyncTarget};
 use lightyear::prelude::*;
-use lightyear::server::events::DisconnectEvent;
-
-use super::protocol::{CoreInformation, PlayerMarker};
+use lightyear::server::events::*;
 
 /// Simple map - That points out the player entity with that given id
 /// Pass a client_id get it is server player entity
@@ -30,6 +26,15 @@ impl Plugin for ServerPlayerPlugin {
         app.observe(spawn_player_when_core);
         // Observer when player is created
         app.observe(add_initial_position);
+
+        // Update because we wanna check for that consantly
+        app.add_systems(Update, insert_input_map);
+
+        // Wait until you receive the newest player input message before you actually replicate to the others
+        app.add_systems(PreUpdate, replicate_inputs.after(MainSet::EmitEvents));
+
+        // Fixed update becaue movement should be frame unrelated
+        app.add_systems(FixedUpdate, move_player);
 
         // In update because it is an event listener
         app.add_systems(Update, despawns_player_when_disconnects);
@@ -113,6 +118,46 @@ fn despawns_player_when_disconnects(
             commands.entity(entity).despawn_recursive();
         } else {
             warn!("Something is wrong with player despawning, couldnt manage to find this client entity {}",client_id);
+        }
+    }
+}
+
+/// Whenever we get a player marker entity we add the input map unto it
+fn insert_input_map(query: Query<Entity, Added<PlayerMarker>>, mut commands: Commands) {
+    for entity in query.iter() {
+        commands
+            .entity(entity)
+            .insert(PlayerActions::default_input_map());
+    }
+}
+
+/// After receiveing action state via input message we replicate that client action to the other clients
+/// So we guarantee that they can be predicte
+pub fn replicate_inputs(
+    mut connection: ResMut<ServerConnectionManager>,
+    mut input_events: ResMut<Events<MessageEvent<InputMessage<PlayerActions>>>>,
+) {
+    for mut event in input_events.drain() {
+        let client_id = *event.context();
+
+        // Optional: do some validation on the inputs to check that there's no cheating
+        // Inputs for a specific tick should be write *once*. Don't let players change old inputs.
+
+        // rebroadcast the input to other clients
+        connection
+            .send_message_to_target::<InputChannel, _>(
+                &mut event.message,
+                NetworkTarget::AllExceptSingle(client_id),
+            )
+            .unwrap()
+    }
+}
+
+/// When player action is active - Do action
+fn move_player(mut player_action: Query<(&ActionState<PlayerActions>, &mut Transform)>) {
+    for (player_action, mut transform) in player_action.iter_mut() {
+        if player_action.just_pressed(&PlayerActions::Forward) {
+            transform.translation += Vec3::new(0.0, 0.0, 1.0)
         }
     }
 }

@@ -3,7 +3,7 @@ use bevy::utils::Duration;
 use egui::SharedEgui;
 use lightyear::prelude::*;
 use lightyear::shared::config::Mode;
-use player::SharedPlayerPlugin;
+// use player::SharedPlayerPlugin;
 use protocol::ProtocolPlugin;
 
 pub const FIXED_TIMESTEP_HZ: f64 = 64.0;
@@ -28,7 +28,7 @@ impl Plugin for CoreSharedPlugin {
     fn build(&self, app: &mut App) {
         // Self made plugins
         app.add_plugins(SharedEgui);
-        app.add_plugins(SharedPlayerPlugin);
+        // app.add_plugins(SharedPlayerPlugin);
         // Protocol plugin- SUPER DUPER IMPORTANT
         app.add_plugins(ProtocolPlugin);
 
