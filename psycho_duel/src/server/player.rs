@@ -1,6 +1,9 @@
+use std::ops::DerefMut;
+
 use crate::server::ClientId;
 use crate::shared::protocol::PlayerId;
 use bevy::prelude::*;
+use bevy::transform::commands;
 use bevy::utils::HashMap;
 use lightyear::prelude::server::{ControlledBy, Lifetime, Replicate, SyncTarget};
 use lightyear::prelude::*;
@@ -23,15 +26,18 @@ impl Plugin for ServerPlayerPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<ServerClientIdPlayerMap>();
 
-        // In update because it is an event listener
+        // Observes when core inserted
         app.observe(spawn_player_when_core);
+        // Observer when player is created
+        app.observe(add_initial_position);
 
         // In update because it is an event listener
         app.add_systems(Update, despawns_player_when_disconnects);
     }
 }
 
-/// Whenever a core information exists spawn player entity
+/// Whenever a core information exists spawn player entity with a given local position
+/// For now it increments
 fn spawn_player_when_core(
     core: Trigger<OnAdd, CoreInformation>,
     player_ids: Query<&PlayerId>,
@@ -41,8 +47,9 @@ fn spawn_player_when_core(
     let core_entity = core.entity();
     if let Ok(player_id) = player_ids.get(core_entity) {
         let client_id = player_id.id;
-        let entity = formulates_player(&client_id, core_entity, &mut commands);
-        player_map.map.insert(client_id, entity);
+        let player = formulates_player(&client_id, core_entity, &mut commands);
+
+        player_map.map.insert(client_id, player);
         info!(
             "Received core information trigger spawning new player for id and adding him to map {}",
             client_id
@@ -75,6 +82,20 @@ fn formulates_player(client_id: &ClientId, entity: Entity, commands: &mut Comman
         .insert(replicate)
         .id();
     id
+}
+
+/// Adjust player so he is slightly ahead of another
+fn add_initial_position(
+    player: Trigger<OnAdd, PlayerMarker>,
+    mut offset: Local<f32>,
+    mut commands: Commands,
+) {
+    let player_ent = player.entity();
+    commands
+        .entity(player_ent)
+        .insert(Transform::from_translation(Vec3::new(0.0, 0.0, *offset)));
+
+    *offset += 0.5;
 }
 
 /// Currently we are despawning players, whenever an disconnect occurs

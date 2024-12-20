@@ -3,12 +3,13 @@ use crate::client::egui::Parts;
 use crate::shared::ClientId;
 use bevy::prelude::*;
 use bevy::utils::HashMap;
+use leafwing_input_manager::prelude::*;
 use lightyear::prelude::client::ComponentSyncMode;
 use lightyear::prelude::*;
-use serde::Deserialize;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use std::fmt;
 use uuid::Uuid;
+
 /// Component that tell me exactly what items that player has available to him we can easily query it via his UUid
 /// Is worth noting this guy is just a wrapped hashmap with renamed functions but who know perhaps later he will have more to it
 #[derive(Component, Reflect, Serialize, Deserialize, PartialEq, Debug, Clone, Default)]
@@ -201,6 +202,48 @@ impl PlayerVisuals {
         }
     }
 }
+/// Abstraction - Utilized to tell me what is the current action of player, gonna be essential for animations and movement
+/// Unfortunately he is not inserted via protocol, although we could treat him as a component. Why? Because of reasons!
+#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Reflect, Clone, Copy, Hash)]
+pub enum PlayerActions {
+    /// Forward direction
+    Forward,
+    /// Backward direction
+    Backward,
+    /// Left direction
+    Left,
+    /// Goes in the cam.right direction
+    Right,
+    /// Actual carries of the given vec2 - He remains empty we fill him according to what direction we wanna give
+    Direction,
+}
+
+impl Actionlike for PlayerActions {
+    fn input_control_kind(&self) -> InputControlKind {
+        match self {
+            Self::Forward => InputControlKind::Button,
+            Self::Backward => InputControlKind::Button,
+            Self::Left => InputControlKind::Button,
+            Self::Right => InputControlKind::Button,
+            Self::Direction => InputControlKind::DualAxis,
+        }
+    }
+}
+
+impl PlayerActions {
+    /// Return the default input map for playert actions. A usefull way of aligning both client and server with the same default input map
+    pub fn default_input_map() -> InputMap<Self> {
+        let input_map = InputMap::default()
+            .with(Self::Forward, KeyCode::KeyW)
+            .with(Self::Forward, KeyCode::ArrowUp)
+            .with(Self::Backward, KeyCode::KeyS)
+            .with(Self::Backward, KeyCode::ArrowDown)
+            .with(Self::Left, KeyCode::KeyA)
+            .with(Self::Left, KeyCode::ArrowLeft)
+            .with(Self::Right, KeyCode::ArrowDown);
+        return input_map;
+    }
+}
 
 /// Our save resource map, it is gonna store all types of core information really important for our mechanics.
 /// Initially this is monolithic, meaning we only have one save info map that stores basically all of user info later we can make subdivisions and subfiles
@@ -259,6 +302,10 @@ pub struct ProtocolPlugin;
 
 impl Plugin for ProtocolPlugin {
     fn build(&self, app: &mut App) {
+        // Leafwing input plugin from lightyear - Responsible for handling all the rollback and go back mechanics
+        // Worth mentioning- Only occurs when all plugins added
+        // Warning - Does not work with leafwing resources
+        app.add_plugins(LeafwingInputPlugin::<PlayerActions>::default());
         // -> First - Spawn an entity with replicate component on server, after you do that this api applies it is logic
         // -> Second - Register component, means that component will be available on the replicated entity on client
         // -> Third - ChannelDirection tells me if it is server to client or client  to server, the replication direction.
@@ -278,6 +325,10 @@ impl Plugin for ProtocolPlugin {
         app.register_component::<Name>(ChannelDirection::ServerToClient)
             .add_prediction(ComponentSyncMode::Once)
             .add_interpolation(ComponentSyncMode::Simple);
+
+        // Okay this guys gets it is own comment because if we fuck him up we screwed
+        app.register_component::<Transform>(ChannelDirection::ServerToClient)
+            .add_prediction(ComponentSyncMode::Full);
 
         // Replicated resources -  The workflow for replicated resources is as follows
         //-> First - Register in shared, as he is supposed to exist both in client and server

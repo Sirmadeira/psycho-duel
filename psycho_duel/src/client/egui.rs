@@ -130,45 +130,47 @@ fn char_customizer_ui(
         if let Some(egui_context) = contexts.try_ctx_mut() {
             // Cleaner dereferencing
             let selected_button = selected_button.deref_mut();
-            egui::Window::new("Char customizer").show(egui_context, |ui| {
-                egui::ScrollArea::both().show(ui, |ui| {
-                    ui.label("Part to change");
-                    // For some unknow reason combobox requires hash id, which I just didnt feel like writing so from empty label it is
-                    egui::ComboBox::from_label("")
-                        .selected_text(format!("{:?}", selected_button))
-                        .show_ui(ui, |ui| {
-                            ui.selectable_value(selected_button, Parts::Head, "Head");
-                            ui.selectable_value(selected_button, Parts::Torso, "Torso");
-                            ui.selectable_value(selected_button, Parts::Leg, "Leg");
-                        });
+            egui::Window::new("Char customizer")
+                .default_open(false)
+                .show(egui_context, |ui| {
+                    egui::ScrollArea::both().show(ui, |ui| {
+                        ui.label("Part to change");
+                        // For some unknow reason combobox requires hash id, which I just didnt feel like writing so from empty label it is
+                        egui::ComboBox::from_label("")
+                            .selected_text(format!("{:?}", selected_button))
+                            .show_ui(ui, |ui| {
+                                ui.selectable_value(selected_button, Parts::Head, "Head");
+                                ui.selectable_value(selected_button, Parts::Torso, "Torso");
+                                ui.selectable_value(selected_button, Parts::Leg, "Leg");
+                            });
 
-                    ui.label("Available parts");
-                    // Matching pattern to grab pre defined const paths
-                    let paths = match selected_button {
-                        Parts::Head => &HEAD_PATHS,
-                        Parts::Torso => &TORSO_PATHS,
-                        Parts::Leg => &LEG_PATHS,
-                    };
+                        ui.label("Available parts");
+                        // Matching pattern to grab pre defined const paths
+                        let paths = match selected_button {
+                            Parts::Head => &HEAD_PATHS,
+                            Parts::Torso => &TORSO_PATHS,
+                            Parts::Leg => &LEG_PATHS,
+                        };
 
-                    // Here we intake ref because we dont wannt to consume file path const
-                    let items: Vec<Item> = paths
-                        .iter()
-                        .map(|&path| Item::new_from_filepath(path))
-                        .collect();
+                        // Here we intake ref because we dont wannt to consume file path const
+                        let items: Vec<Item> = paths
+                            .iter()
+                            .map(|&path| Item::new_from_filepath(path))
+                            .collect();
 
-                    // For each item, we make a button  capable of sending an event with it is given file_path
-                    for item in items.iter() {
-                        let item_name = item.name.to_string();
+                        // For each item, we make a button  capable of sending an event with it is given file_path
+                        for item in items.iter() {
+                            let item_name = item.name.to_string();
 
-                        if ui.button(&item_name).clicked() {
-                            let client_id = player_id.id;
-                            // Selected button is technically also the definer of what body part we want to change didnt name it differently because of egui context
-                            let body_part = &selected_button;
-                            send_trigger_event(&mut commands, body_part, item, client_id);
+                            if ui.button(&item_name).clicked() {
+                                let client_id = player_id.id;
+                                // Selected button is technically also the definer of what body part we want to change didnt name it differently because of egui context
+                                let body_part = &selected_button;
+                                send_trigger_event(&mut commands, body_part, item, client_id);
+                            }
                         }
-                    }
-                })
-            });
+                    })
+                });
         }
     }
 }
@@ -204,35 +206,37 @@ fn currency_ui(
         // Grab primary window ctx
         if let Some(egui_context) = contexts.try_ctx_mut() {
             // Use the egui context
-            egui::Window::new("Currency mechanics").show(egui_context, |ui| {
-                ui.heading(format!("Total amount {}", current_currency.amount));
-                if ui.button("Gain currency").clicked() {
-                    current_currency.add(10.0);
+            egui::Window::new("Currency mechanics")
+                .default_open(false)
+                .show(egui_context, |ui| {
+                    ui.heading(format!("Total amount {}", current_currency.amount));
+                    if ui.button("Gain currency").clicked() {
+                        current_currency.add(10.0);
 
-                    // Send event here
-                    let _ = connection_manager.send_message::<CommonChannel, SaveMessage>(
-                        &mut SaveMessage {
-                            id: player_id.id,
-                            change_char: None,
-                            change_currency: Some(current_currency.clone()),
-                            change_inventory: None,
-                        },
-                    );
-                }
-                if ui.button("Lose currency").clicked() {
-                    // Adjust currency logic and send event here
-                    current_currency.sub(10.0);
+                        // Send event here
+                        let _ = connection_manager.send_message::<CommonChannel, SaveMessage>(
+                            &mut SaveMessage {
+                                id: player_id.id,
+                                change_char: None,
+                                change_currency: Some(current_currency.clone()),
+                                change_inventory: None,
+                            },
+                        );
+                    }
+                    if ui.button("Lose currency").clicked() {
+                        // Adjust currency logic and send event here
+                        current_currency.sub(10.0);
 
-                    let _ = connection_manager.send_message::<CommonChannel, SaveMessage>(
-                        &mut SaveMessage {
-                            id: player_id.id,
-                            change_char: None,
-                            change_currency: Some(current_currency.clone()),
-                            change_inventory: None,
-                        },
-                    );
-                }
-            });
+                        let _ = connection_manager.send_message::<CommonChannel, SaveMessage>(
+                            &mut SaveMessage {
+                                id: player_id.id,
+                                change_char: None,
+                                change_currency: Some(current_currency.clone()),
+                                change_inventory: None,
+                            },
+                        );
+                    }
+                });
         }
     }
 }
@@ -262,30 +266,32 @@ fn store_ui(
                     .collect();
 
                 // Render the store UI
-                egui::Window::new("Store").show(egui_context, |ui| {
-                    egui::ScrollArea::both().show(ui, |ui| {
-                        ui.horizontal(|ui| {
-                            // Buy section
-                            render_buy_section(
-                                ui,
-                                &items,
-                                &player_id,
-                                &mut player_inv,
-                                &mut player_money,
-                                &mut connection_manager,
-                            );
+                egui::Window::new("Store")
+                    .default_open(false)
+                    .show(egui_context, |ui| {
+                        egui::ScrollArea::both().show(ui, |ui| {
+                            ui.horizontal(|ui| {
+                                // Buy section
+                                render_buy_section(
+                                    ui,
+                                    &items,
+                                    &player_id,
+                                    &mut player_inv,
+                                    &mut player_money,
+                                    &mut connection_manager,
+                                );
 
-                            // Sell section
-                            render_sell_section(
-                                ui,
-                                &player_id,
-                                &mut player_inv,
-                                &mut player_money,
-                                &mut connection_manager,
-                            );
+                                // Sell section
+                                render_sell_section(
+                                    ui,
+                                    &player_id,
+                                    &mut player_inv,
+                                    &mut player_money,
+                                    &mut connection_manager,
+                                );
+                            });
                         });
                     });
-                });
             }
         }
     }

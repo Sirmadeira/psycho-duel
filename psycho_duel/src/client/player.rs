@@ -80,7 +80,7 @@ fn render_predicted_player(
     mut commands: Commands,
 ) {
     for (parent, player_id, player_visuals) in player.iter() {
-        // Avoids error - https://bevyengine.org/learn/errors/b0004/
+        // Avoids error - https://bevyengine.org/learn/errors/b0004/ - Dont worry, about transform here server can easily override if necessary
         commands.entity(parent).insert(SpatialBundle::default());
         for item in player_visuals.iter_visuals() {
             if let Some(entity) = spawn_visual_scene(item, &gltf_collection, &gltfs, &mut commands)

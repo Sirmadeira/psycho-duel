@@ -3,6 +3,7 @@ use bevy::utils::Duration;
 use egui::SharedEgui;
 use lightyear::prelude::*;
 use lightyear::shared::config::Mode;
+use player::SharedPlayerPlugin;
 use protocol::ProtocolPlugin;
 
 pub const FIXED_TIMESTEP_HZ: f64 = 64.0;
@@ -18,16 +19,18 @@ pub struct CoreSharedPlugin;
 pub struct CommonChannel;
 
 // All mods in shared need to be pubbed
+pub mod diagnostic;
 pub mod egui;
+pub mod player;
 pub mod protocol;
 
 impl Plugin for CoreSharedPlugin {
     fn build(&self, app: &mut App) {
-        // Protocol plugin- SUPER DUPER IMPORTANT
-        app.add_plugins(ProtocolPlugin);
-
         // Self made plugins
         app.add_plugins(SharedEgui);
+        app.add_plugins(SharedPlayerPlugin);
+        // Protocol plugin- SUPER DUPER IMPORTANT
+        app.add_plugins(ProtocolPlugin);
 
         //Self made channels
         app.add_channel::<CommonChannel>(ChannelSettings {

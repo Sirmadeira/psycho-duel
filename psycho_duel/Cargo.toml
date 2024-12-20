@@ -9,7 +9,7 @@ bevy = { version = "0.14.2", features = ["multi_threaded", "serialize", "bevy_st
 bevy_dylib = "0.14.2"
 log = { version = "*", features = ["max_level_debug", "release_max_level_warn"] }
 # Networked environment - lightyear related dependencies
-lightyear = {version =  "0.17.1"}
+lightyear = {version =  "0.17.1",features = ["leafwing"]}
 serde = { version = "1.0", features = ["derive"] }
 clap = { version = "4.5", features = ["derive"] }
 # Bevy inspector and egui crates 
