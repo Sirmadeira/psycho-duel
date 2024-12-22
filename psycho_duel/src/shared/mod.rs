@@ -5,6 +5,7 @@ use lightyear::prelude::*;
 use lightyear::shared::config::Mode;
 // use player::SharedPlayerPlugin;
 use protocol::ProtocolPlugin;
+use renderer::SharedRendererPlugin;
 
 pub const FIXED_TIMESTEP_HZ: f64 = 64.0;
 
@@ -21,14 +22,15 @@ pub struct CommonChannel;
 // All mods in shared need to be pubbed
 pub mod diagnostic;
 pub mod egui;
-pub mod player;
 pub mod protocol;
+pub mod renderer;
 
 impl Plugin for CoreSharedPlugin {
     fn build(&self, app: &mut App) {
         // Self made plugins
         app.add_plugins(SharedEgui);
-        // app.add_plugins(SharedPlayerPlugin);
+        app.add_plugins(SharedRendererPlugin);
+
         // Protocol plugin- SUPER DUPER IMPORTANT
         app.add_plugins(ProtocolPlugin);
 

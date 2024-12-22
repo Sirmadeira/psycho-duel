@@ -36,7 +36,7 @@ pub struct CoreEasyClient {
     client_id: ClientId,
 }
 
-mod camera;
+pub mod camera;
 // This guy is public because we need to share the Parts struct with the impl on shared
 pub mod egui;
 mod load_assets;

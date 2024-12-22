@@ -4,15 +4,12 @@ use super::{
     protocol::{PlayerId, PlayerMarker, PlayerVisuals},
     ClientAppState,
 };
+use crate::shared::protocol::*;
 use crate::shared::CommonChannel;
-use crate::shared::{player, protocol::*};
-use bevy::{prelude::*, transform::commands, utils::HashMap};
+use bevy::{prelude::*, utils::HashMap};
 use leafwing_input_manager::prelude::*;
-use lightyear::{
-    client::input::leafwing::InputSystemSet, prelude::*,
-    shared::replication::components::Controlled,
-};
 use lightyear::{client::prediction::Predicted, shared::events::components::MessageEvent};
+use lightyear::{prelude::*, shared::replication::components::Controlled};
 
 /// Centralization plugin - Everything correlated to player shall be inserted here
 pub struct ClientPlayerPlugin;

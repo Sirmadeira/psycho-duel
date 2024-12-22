@@ -77,6 +77,7 @@ fn formulates_player(client_id: &ClientId, entity: Entity, commands: &mut Comman
             target: NetworkTarget::Single(*client_id),
             lifetime: Lifetime::Persistent,
         },
+        group: REPLICATION_GROUP,
         ..default()
     };
     //Spawning ids

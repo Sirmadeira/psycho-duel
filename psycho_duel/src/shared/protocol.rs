@@ -295,6 +295,10 @@ pub struct SaveMessage {
     pub change_inventory: Option<Inventory>,
 }
 
+/// For prediction, we want every entity that is predicted to be part of the same replication group This will make sure that they will be replicated
+// in the same message and that all the entities in the group will always be consistent (= on the same tick)
+pub const REPLICATION_GROUP: ReplicationGroup = ReplicationGroup::new_id(1);
+
 /// Centralization plugin - Defines how our component will be synced (from server to client or client to server or bidirectional)
 /// Defines what essential components need to be replicated among the two.
 pub struct ProtocolPlugin;
@@ -328,6 +332,7 @@ impl Plugin for ProtocolPlugin {
         // Okay this guys gets it is own comment because if we fuck him up we screwed
         app.register_component::<Transform>(ChannelDirection::ServerToClient)
             .add_prediction(ComponentSyncMode::Full)
+            .add_interpolation_fn(TransformLinearInterpolation::lerp)
             .add_correction_fn(TransformLinearInterpolation::lerp);
 
         // Replicated resources -  The workflow for replicated resources is as follows
