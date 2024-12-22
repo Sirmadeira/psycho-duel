@@ -239,7 +239,8 @@ impl PlayerActions {
             .with(Self::Backward, KeyCode::ArrowDown)
             .with(Self::Left, KeyCode::KeyA)
             .with(Self::Left, KeyCode::ArrowLeft)
-            .with(Self::Right, KeyCode::ArrowDown);
+            .with(Self::Right, KeyCode::ArrowRight)
+            .with(Self::Right, KeyCode::KeyD);
         return input_map;
     }
 }

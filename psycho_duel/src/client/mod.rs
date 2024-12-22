@@ -109,7 +109,8 @@ fn build_client_plugin(client_id: &u64) -> ClientPlugins {
         shared: shared_config(),
         net: net_config,
         prediction: PredictionConfig {
-            correction_ticks_factor: 1.5,
+            minimum_input_delay_ticks: 3,
+            correction_ticks_factor: 2.5,
             ..default()
         },
         ..default()

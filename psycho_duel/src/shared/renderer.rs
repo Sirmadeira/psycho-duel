@@ -1,7 +1,6 @@
-use crate::shared::client::Confirmed;
 use crate::shared::client::{VisualInterpolateStatus, VisualInterpolationPlugin};
 use bevy::prelude::*;
-use lightyear::prelude::client::Correction;
+use lightyear::prelude::client::Predicted;
 
 use super::protocol::PlayerMarker;
 
@@ -20,7 +19,7 @@ impl Plugin for SharedRendererPlugin {
 /// For better understanding go-to - https://cbournhonesque.github.io/lightyear/book/concepts/advanced_replication/visual_interpolation.html
 fn add_visual_interpolation_components<T: Component>(
     trigger: Trigger<OnAdd, T>,
-    query: Query<Entity, (With<T>, With<PlayerMarker>, Without<Confirmed>)>,
+    query: Query<Entity, (With<T>, With<PlayerMarker>, With<Predicted>)>,
     mut commands: Commands,
 ) {
     if !query.contains(trigger.entity()) {

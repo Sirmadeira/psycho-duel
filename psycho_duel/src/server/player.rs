@@ -164,6 +164,12 @@ fn move_player(mut player_action: Query<(&ActionState<PlayerActions>, &mut Trans
             if player_action.pressed(&PlayerActions::Backward) {
                 transform.translation -= Vec3::new(0.0, 0.0, 0.1);
             }
+            if player_action.pressed(&PlayerActions::Left) {
+                transform.translation += Vec3::new(0.1, 0.0, 0.0);
+            }
+            if player_action.pressed(&PlayerActions::Right) {
+                transform.translation -= Vec3::new(0.1, 0.0, 0.0);
+            }
         }
     }
 }
