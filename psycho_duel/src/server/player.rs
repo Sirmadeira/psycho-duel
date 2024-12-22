@@ -133,7 +133,7 @@ fn insert_input_map(query: Query<Entity, Added<PlayerMarker>>, mut commands: Com
 }
 
 /// After receiveing action state via input message we replicate that client action to the other clients
-/// So we guarantee that they can be predicte
+/// So we guarantee that they can be predicted
 pub fn replicate_inputs(
     mut connection: ResMut<ServerConnectionManager>,
     mut input_events: ResMut<Events<MessageEvent<InputMessage<PlayerActions>>>>,
@@ -157,8 +157,13 @@ pub fn replicate_inputs(
 /// When player action is active - Do action
 fn move_player(mut player_action: Query<(&ActionState<PlayerActions>, &mut Transform)>) {
     for (player_action, mut transform) in player_action.iter_mut() {
-        if player_action.pressed(&PlayerActions::Forward) {
-            transform.translation += Vec3::new(0.0, 0.0, 0.1);
+        if !player_action.get_pressed().is_empty() {
+            if player_action.pressed(&PlayerActions::Forward) {
+                transform.translation += Vec3::new(0.0, 0.0, 0.1);
+            }
+            if player_action.pressed(&PlayerActions::Backward) {
+                transform.translation -= Vec3::new(0.0, 0.0, 0.1);
+            }
         }
     }
 }

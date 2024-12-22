@@ -1,6 +1,7 @@
 use crate::shared::client::Confirmed;
 use crate::shared::client::{VisualInterpolateStatus, VisualInterpolationPlugin};
 use bevy::prelude::*;
+use lightyear::prelude::client::Correction;
 
 use super::protocol::PlayerMarker;
 

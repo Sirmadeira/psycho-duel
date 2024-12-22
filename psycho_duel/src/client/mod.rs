@@ -108,6 +108,10 @@ fn build_client_plugin(client_id: &u64) -> ClientPlugins {
         // part of the config needs to be shared between the client and server
         shared: shared_config(),
         net: net_config,
+        prediction: PredictionConfig {
+            correction_ticks_factor: 1.5,
+            ..default()
+        },
         ..default()
     };
     ClientPlugins::new(config)

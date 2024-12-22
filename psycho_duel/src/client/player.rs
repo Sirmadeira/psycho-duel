@@ -45,7 +45,7 @@ impl Plugin for ClientPlayerPlugin {
         // In observe because ideally this should be stateless
         app.observe(customize_local_player);
 
-        // In update because observer tend to be unstable (adds component in a disorderly fashion)
+        // In update because observer tend to be unstable (adds component in a disorderly fashion therefore it doesnt run sometime)
         app.add_systems(Update, customize_player_on_other_clients);
 
         // In update because we wanna keep checking this all the time when we do lobbies
@@ -299,10 +299,7 @@ fn insert_input_map(
 
 /// Move player solely moves the predicted controlled player, later server will also give you the true position
 fn move_player(
-    mut player_action: Query<
-        (&ActionState<PlayerActions>, &mut Transform),
-        (With<Predicted>, With<Controlled>),
-    >,
+    mut player_action: Query<(&ActionState<PlayerActions>, &mut Transform), With<Predicted>>,
 ) {
     for (player_action, mut transform) in player_action.iter_mut() {
         // You know only act when we actually have something to do
@@ -310,6 +307,9 @@ fn move_player(
             // Make this shared
             if player_action.pressed(&PlayerActions::Forward) {
                 transform.translation += Vec3::new(0.0, 0.0, 0.1);
+            }
+            if player_action.pressed(&PlayerActions::Backward) {
+                transform.translation -= Vec3::new(0.0, 0.0, 0.1);
             }
         }
     }
