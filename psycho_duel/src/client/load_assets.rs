@@ -38,7 +38,7 @@ pub struct GltfCollection {
 /// Stores handles to all of the images utilized in our game
 #[derive(AssetCollection, Resource, Reflect)]
 #[reflect(Resource)]
-pub struct Images {
+pub struct ImagesCollection {
     #[asset(path = "images", collection(typed, mapped))]
     pub map: HashMap<String, Handle<Image>>,
 }
@@ -47,12 +47,12 @@ impl Plugin for LoadAssetsPlugin {
     fn build(&self, app: &mut App) {
         // Add in world debugger
         app.register_type::<GltfCollection>();
-        app.register_type::<Images>();
+        app.register_type::<ImagesCollection>();
         app.add_loading_state(
             // Simple syntax sugar for our state transition and which specific collections we shall load, this can be used multiple times.
             LoadingState::new(ClientAppState::LoadingAssets)
                 .load_collection::<GltfCollection>()
-                .load_collection::<Images>()
+                .load_collection::<ImagesCollection>()
                 .continue_to_state(ClientAppState::Game),
         );
     }

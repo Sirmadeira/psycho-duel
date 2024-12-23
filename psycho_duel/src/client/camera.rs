@@ -40,6 +40,9 @@ impl Plugin for ClientCameraPlugin {
                 .before(TransformSystem::TransformPropagate)
                 .run_if(rc_follow_player),
         );
+
+        // Debug register
+        app.register_type::<CamFeatures>();
     }
 }
 

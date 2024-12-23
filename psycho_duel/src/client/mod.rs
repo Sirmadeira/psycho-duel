@@ -8,6 +8,7 @@ use lightyear::prelude::client::*;
 use lightyear::prelude::*;
 use player::ClientPlayerPlugin;
 use protocol::CoreSaveInfoMap;
+use skybox::SkyboxPlugin;
 use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 
 /// Centralization plugin - When we pass in the cli the arg "client" this guy runs
@@ -41,6 +42,7 @@ pub mod camera;
 pub mod egui;
 mod load_assets;
 mod player;
+mod skybox;
 
 impl Plugin for CoreClientPlugin {
     fn build(&self, app: &mut App) {
@@ -61,6 +63,7 @@ impl Plugin for CoreClientPlugin {
         app.add_plugins(ClientEguiPlugin);
         app.add_plugins(ClientPlayerPlugin);
         app.add_plugins(LoadAssetsPlugin);
+        app.add_plugins(SkyboxPlugin);
 
         // Initializing center state of client
         app.init_state::<ClientAppState>();
