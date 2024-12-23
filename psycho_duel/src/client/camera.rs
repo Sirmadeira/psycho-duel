@@ -19,7 +19,7 @@ impl Plugin for ClientCameraPlugin {
 /// Spawns our primary camera entity
 fn spawn_camera(mut commands: Commands) {
     commands
-        .spawn(Camera3dBundle::default())
+        .spawn(Camera3d::default())
         .insert(MarkerPrimaryCamera)
         .insert(Name::new("MainCamera"))
         .insert(Transform::from_translation(Vec3::new(0.0, 1.5, 5.0)))

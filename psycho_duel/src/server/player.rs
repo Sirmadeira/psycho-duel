@@ -3,9 +3,8 @@ use crate::shared::protocol::*;
 use bevy::prelude::*;
 use bevy::utils::HashMap;
 use leafwing_input_manager::prelude::*;
-use lightyear::prelude::server::{ControlledBy, Lifetime, Replicate, SyncTarget};
+use lightyear::prelude::server::*;
 use lightyear::prelude::*;
-use lightyear::server::events::*;
 
 /// Simple map - That points out the player entity with that given id
 /// Pass a client_id get it is server player entity
@@ -23,9 +22,9 @@ impl Plugin for ServerPlayerPlugin {
         app.init_resource::<ServerClientIdPlayerMap>();
 
         // Observes when core inserted
-        app.observe(spawn_player_when_core);
+        app.add_observer(spawn_player_when_core);
         // Observer when player is created
-        app.observe(add_initial_position);
+        app.add_observer(add_initial_position);
 
         // Update because we wanna check for that consantly
         app.add_systems(Update, insert_input_map);

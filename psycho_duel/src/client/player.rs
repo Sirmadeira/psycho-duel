@@ -43,7 +43,7 @@ impl Plugin for ClientPlayerPlugin {
         );
 
         // In observe because ideally this should be stateless
-        app.observe(customize_local_player);
+        app.add_observer(customize_local_player);
 
         // In update because observer tend to be unstable (adds component in a disorderly fashion therefore it doesnt run sometime)
         app.add_systems(Update, customize_player_on_other_clients);
@@ -85,7 +85,10 @@ fn render_predicted_player(
 ) {
     for (parent, player_id, player_visuals) in player.iter() {
         // Avoids error - https://bevyengine.org/learn/errors/b0004/ - Dont worry, about transform here server can easily override if necessary
-        commands.entity(parent).insert(SpatialBundle::default());
+        commands
+            .entity(parent)
+            .insert(Transform::default())
+            .insert(Visibility::default());
         for item in player_visuals.iter_visuals() {
             if let Some(entity) = spawn_visual_scene(item, &gltf_collection, &gltfs, &mut commands)
             {
@@ -110,11 +113,7 @@ fn spawn_visual_scene(
         if let Some(loaded_gltf) = gltfs.get(gltf) {
             let scene = loaded_gltf.scenes[0].clone_weak();
             let id = commands
-                .spawn(SceneBundle {
-                    scene: scene,
-
-                    ..default()
-                })
+                .spawn(SceneRoot(scene))
                 .insert(item.name.clone())
                 .id();
             Some(id)

@@ -10,7 +10,7 @@ pub struct SharedRendererPlugin;
 impl Plugin for SharedRendererPlugin {
     fn build(&self, app: &mut App) {
         app.add_plugins(VisualInterpolationPlugin::<Transform>::default());
-        app.observe(add_visual_interpolation_components::<Transform>);
+        app.add_observer(add_visual_interpolation_components::<Transform>);
     }
 }
 
