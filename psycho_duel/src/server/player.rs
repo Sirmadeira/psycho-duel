@@ -112,9 +112,8 @@ fn despawns_player_when_disconnects(
 ) {
     for event in disconnection.read() {
         let client_id = event.client_id;
-
+        info!("Despawning player entity for {}", client_id);
         if let Some(entity) = player_map.map.remove(&client_id) {
-            info!("Despawning player entity {} for {}", entity, client_id);
             commands.entity(entity).despawn_recursive();
         } else {
             warn!("Something is wrong with player despawning, couldnt manage to find this client entity {}",client_id);

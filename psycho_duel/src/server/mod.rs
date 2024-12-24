@@ -5,6 +5,7 @@ use lightyear::prelude::*;
 use player::ServerPlayerPlugin;
 use save::SavePlugin;
 use std::net::{IpAddr, Ipv4Addr, SocketAddr};
+use world::ServerWorldPlugin;
 
 pub const SERVER_ADDR: SocketAddr = SocketAddr::new(IpAddr::V4(Ipv4Addr::LOCALHOST), 5000);
 
@@ -13,6 +14,7 @@ pub struct CoreServerPlugin;
 
 mod player;
 mod save;
+mod world;
 
 impl Plugin for CoreServerPlugin {
     fn build(&self, app: &mut App) {
@@ -34,6 +36,7 @@ impl Plugin for CoreServerPlugin {
         // Adding our self-made plugins
         app.add_plugins(ServerPlayerPlugin);
         app.add_plugins(SavePlugin);
+        app.add_plugins(ServerWorldPlugin);
     }
 }
 

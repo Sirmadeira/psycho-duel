@@ -9,6 +9,7 @@ use lightyear::prelude::client::ComponentSyncMode;
 use lightyear::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::fmt;
+use std::time::Duration;
 use uuid::Uuid;
 
 /// Component that tell me exactly what items that player has available to him we can easily query it via his UUid
@@ -300,6 +301,26 @@ pub struct SaveMessage {
 // in the same message and that all the entities in the group will always be consistent (= on the same tick)
 pub const REPLICATION_GROUP: ReplicationGroup = ReplicationGroup::new_id(1);
 
+/// Marker component for our sun entity, this guy is basically a orbiting directional light
+/// Our sun position is orbited by our client, but the values are sent via server
+#[derive(Component, Serialize, Deserialize, Clone, PartialEq)]
+pub struct SunMarker;
+
+/// A repeatable cycle timer - Each ticked second represents a portion of the radians we move along being the defined duration,
+/// For better understanding: 24 secs = 360, 1 sec = 15 degrees
+#[derive(Component, Serialize, Deserialize, Clone, PartialEq, Reflect)]
+pub struct CycleTimer {
+    pub cycle: Timer,
+}
+
+impl Default for CycleTimer {
+    fn default() -> Self {
+        Self {
+            cycle: Timer::new(Duration::from_secs(24), TimerMode::Repeating),
+        }
+    }
+}
+
 /// Centralization plugin - Defines how our component will be synced (from server to client or client to server or bidirectional)
 /// Defines what essential components need to be replicated among the two.
 pub struct ProtocolPlugin;
@@ -348,10 +369,15 @@ impl Plugin for ProtocolPlugin {
         // -> Read it via EventReader<MessageEvent<>>
         app.register_message::<SaveMessage>(ChannelDirection::Bidirectional);
 
+        // Our sun
+        app.register_component::<SunMarker>(ChannelDirection::ServerToClient);
+        app.register_component::<CycleTimer>(ChannelDirection::ServerToClient);
+
         // Debug registering
         app.register_type::<PlayerId>();
         app.register_type::<PlayerVisuals>();
         app.register_type::<CoreSaveInfoMap>();
+        app.register_type::<CycleTimer>();
     }
 }
 

@@ -15,6 +15,11 @@ impl Plugin for SkyboxPlugin {
     }
 }
 
+/// The workflow for this goes as follow\
+/// -> Make an image that represents your atmosphere a good approach is just make a blender sphere and add texture to it
+/// -> Then save that texture as PNG and convert it into a cubemap via https://jaxry.github.io/panorama-to-cubemap/
+/// -> After that create a spritesheet from it - https://www.codeandweb.com/free-sprite-sheet-packer
+/// -> And finally just add it in images and test accordingly
 fn reinterpret_skysheet_image(
     mut images: ResMut<Assets<Image>>,
     loaded_images: Res<ImagesCollection>,
@@ -25,12 +30,12 @@ fn reinterpret_skysheet_image(
         for file_name in loaded_images.map.keys() {
             info!("File name {}", file_name);
         }
-
+        // Sprite sheet is just white, skysheets gives a cool cube effect
         let image_handle = loaded_images
             .map
             .get("images/skysheet.png")
             .expect("To find images/skysheet.png loaded");
-        
+
         let sky_image = images.get_mut(image_handle).unwrap();
 
         // This convers the skysheet into a skybox image
@@ -45,7 +50,7 @@ fn reinterpret_skysheet_image(
 
         let skybox = Skybox {
             image: image_handle.clone_weak(),
-            brightness: 1000.0,
+            brightness: 500.0,
             ..default()
         };
 

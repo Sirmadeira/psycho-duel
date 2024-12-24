@@ -10,6 +10,7 @@ use player::ClientPlayerPlugin;
 use protocol::CoreSaveInfoMap;
 use skybox::SkyboxPlugin;
 use std::net::{IpAddr, Ipv4Addr, SocketAddr};
+use world::ClientWorldPlugin;
 
 /// Centralization plugin - When we pass in the cli the arg "client" this guy runs
 pub struct CoreClientPlugin {
@@ -43,6 +44,7 @@ pub mod egui;
 mod load_assets;
 mod player;
 mod skybox;
+mod world;
 
 impl Plugin for CoreClientPlugin {
     fn build(&self, app: &mut App) {
@@ -62,6 +64,7 @@ impl Plugin for CoreClientPlugin {
         app.add_plugins(ClientCameraPlugin);
         app.add_plugins(ClientEguiPlugin);
         app.add_plugins(ClientPlayerPlugin);
+        app.add_plugins(ClientWorldPlugin);
         app.add_plugins(LoadAssetsPlugin);
         app.add_plugins(SkyboxPlugin);
 

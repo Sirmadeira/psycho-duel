@@ -32,8 +32,11 @@ impl Plugin for ClientCameraPlugin {
     fn build(&self, app: &mut App) {
         // Spawns our camera
         app.add_plugins(PanOrbitCameraPlugin);
+        // Should occur right in the early stages
         app.add_systems(Startup, spawn_camera);
+        // In update for responsiveness
         app.add_systems(Update, toggle_cam_follow);
+        // Already set it here because I know when we add physics we are going to have headaches with this
         app.add_systems(
             PostUpdate,
             cam_follow_player
@@ -43,6 +46,7 @@ impl Plugin for ClientCameraPlugin {
 
         // Debug register
         app.register_type::<CamFeatures>();
+        app.register_type::<PanOrbitCamera>();
     }
 }
 
