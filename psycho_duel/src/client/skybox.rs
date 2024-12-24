@@ -27,9 +27,6 @@ fn reinterpret_skysheet_image(
     mut commands: Commands,
 ) {
     if let Ok(cam_ent) = cam_q.get_single() {
-        for file_name in loaded_images.map.keys() {
-            info!("File name {}", file_name);
-        }
         // Sprite sheet is just white, skysheets gives a cool cube effect
         let image_handle = loaded_images
             .map

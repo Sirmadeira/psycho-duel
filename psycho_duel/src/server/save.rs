@@ -81,27 +81,27 @@ fn save(save_info_map: &CoreSaveInfoMap) {
 /// Currently this creates or reads a bincode file that stores all of our previous users infos
 /// We could later make it into a NOSQL database. Not sure if necessary
 fn create_or_read_save_file(mut commands: Commands) {
-    // First check if we are able to open save_file path
     match File::open(SAVE_FILE_PATH) {
-        // If okay we insert the replicated resource unto server
         Ok(file) => {
             info!("Managed to open pre-existing save file");
             let buf_reader = BufReader::new(file);
 
-            let save_info: CoreSaveInfoMap = deserialize_from(buf_reader).expect(
-                "If this breaks is because you changed CoreSaveInfoMap fields just delete old save folder",
-            );
+            let save_info = deserialize_from(buf_reader).unwrap_or_else(|err| {
+                error!("You probably changed core information filed, which means you need to recreate the save file! So for now you have no save");
+                error!("Error type {}",err);
+                CoreSaveInfoMap::default()
+            });
 
             commands.insert_resource(save_info);
         }
-        // If not okay because we didnt found the file. We create a new file and inititialize a default value for our save resource.
         Err(err) if err.kind() == ErrorKind::NotFound => {
-            info!("File doesnt currently exist creating a default CoreSaveInfoMap");
+            info!("Save file doesnt currently exist creating a default CoreSaveInfoMap");
             let mut f = BufWriter::new(
                 File::create(SAVE_FILE_PATH).expect("To be able to create new file"),
             );
 
             let save_info = CoreSaveInfoMap::default();
+
             serialize_into(&mut f, &save_info)
                 .expect("To be able to serialize into new file on startup");
 

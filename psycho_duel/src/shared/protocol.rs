@@ -316,7 +316,7 @@ pub struct CycleTimer {
 impl Default for CycleTimer {
     fn default() -> Self {
         Self {
-            cycle: Timer::new(Duration::from_secs(24), TimerMode::Repeating),
+            cycle: Timer::new(Duration::from_secs(24 * 60), TimerMode::Repeating),
         }
     }
 }
