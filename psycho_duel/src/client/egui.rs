@@ -1,17 +1,19 @@
 use std::ops::DerefMut;
 
+use super::load_assets::GltfCollection;
+use super::protocol::*;
+use super::CommonChannel;
+
 use crate::client::{ClientAppState, CoreEasyClient};
 use crate::shared::protocol::Currency;
 use bevy::prelude::*;
 use bevy::window::PrimaryWindow;
 use bevy_egui::{egui, EguiContext};
+use client::ClientCommands;
+use client::NetworkingState;
 use client::Predicted;
 use lightyear::prelude::*;
 use lightyear::shared::replication::components::Controlled;
-
-use super::load_assets::GltfCollection;
-use super::protocol::*;
-use super::CommonChannel;
 /// Client focused egui
 pub struct ClientEguiPlugin;
 
@@ -61,7 +63,13 @@ impl Plugin for ClientEguiPlugin {
         //In update by default
         app.add_systems(
             Update,
-            (inspector_ui, char_customizer_ui, currency_ui, store_ui),
+            (
+                inspector_ui,
+                char_customizer_ui,
+                currency_ui,
+                store_ui,
+                manage_connection_ui,
+            ),
         );
     }
 }
@@ -91,9 +99,7 @@ fn inspector_ui(world: &mut World) {
                 ui.add_space(10.0);
                 bevy_inspector_egui::bevy_inspector::ui_for_state::<ClientAppState>(world, ui);
                 // Wait for PR
-                // bevy_inspector_egui::bevy_inspector::ui_for_state::<NetworkingState>(
-                //     world, ui,
-                // );
+                // bevy_inspector_egui::bevy_inspector::ui_for_state::<NetworkingState>(world, ui);
 
                 ui.heading("Additional Resources");
                 ui.add_space(10.0);
@@ -374,4 +380,31 @@ fn render_sell_section(
             });
         }
     });
+}
+
+/// Egui to test disconnection and connection of clients
+fn manage_connection_ui(
+    mut contexts: bevy_egui::EguiContexts,
+    network_state: Res<State<NetworkingState>>,
+    mut commands: Commands,
+) {
+    if let Some(egui_context) = contexts.try_ctx_mut() {
+        egui::Window::new("Manage connections").show(&egui_context, |ui| {
+            match network_state.get() {
+                NetworkingState::Connected => {
+                    if ui.button("Disconnect client").clicked() {
+                        commands.disconnect_client();
+                    }
+                }
+                NetworkingState::Connecting => {
+                    ui.heading("Connecting our client");
+                }
+                NetworkingState::Disconnected => {
+                    if ui.button("Connect client").clicked() {
+                        commands.connect_client();
+                    }
+                }
+            }
+        });
+    }
 }

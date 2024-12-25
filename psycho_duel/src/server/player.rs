@@ -37,6 +37,9 @@ impl Plugin for ServerPlayerPlugin {
 
         // In update because it is an event listener
         app.add_systems(Update, despawns_player_when_disconnects);
+
+        //Debug
+        app.register_type::<ServerClientIdPlayerMap>();
     }
 }
 
@@ -106,7 +109,7 @@ fn add_initial_position(
 /// Currently we are despawning players, whenever an disconnect occurs
 /// COOL TODO - Visually display when a player rage quitted in game. Added in issues https://github.com/Sirmadeira/psycho-duel/issues/2
 fn despawns_player_when_disconnects(
-    mut disconnection: EventReader<DisconnectEvent>,
+    mut disconnection: EventReader<ServerDisconnectEvent>,
     mut player_map: ResMut<ServerClientIdPlayerMap>,
     mut commands: Commands,
 ) {
@@ -132,7 +135,7 @@ fn insert_input_map(query: Query<Entity, Added<PlayerMarker>>, mut commands: Com
 
 /// After receiveing action state via input message we replicate that client action to the other clients
 /// So we guarantee that they can be predicted
-pub fn replicate_inputs(
+fn replicate_inputs(
     mut connection: ResMut<ServerConnectionManager>,
     mut input_events: ResMut<Events<MessageEvent<InputMessage<PlayerActions>>>>,
 ) {
