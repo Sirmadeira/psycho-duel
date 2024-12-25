@@ -34,8 +34,8 @@ impl Plugin for CoreServerPlugin {
         app.add_systems(Startup, start_server);
 
         // Adding our self-made plugins
-        app.add_plugins(ServerPlayerPlugin);
         app.add_plugins(SavePlugin);
+        app.add_plugins(ServerPlayerPlugin);
         app.add_plugins(ServerWorldPlugin);
     }
 }

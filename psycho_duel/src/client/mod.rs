@@ -1,7 +1,7 @@
 use crate::client::load_assets::LoadAssetsPlugin;
 use crate::server::SERVER_ADDR;
 use crate::shared::*;
-use bevy::prelude::*;
+use bevy::{prelude::*, window::ClosingWindow};
 use camera::ClientCameraPlugin;
 use egui::ClientEguiPlugin;
 use lightyear::prelude::client::*;
@@ -77,8 +77,11 @@ impl Plugin for CoreClientPlugin {
         // Add our client-specific logic. Here we will just connect to the server only when we have our assets loaded
         app.add_systems(OnEnter(ClientAppState::Game), connect_client);
 
-        // Essential systems- Run in update because as reconnects may occur client id may vary, only prod tho.
+        // Essential systems - Run in update because as reconnects may occur client id may vary, only prod tho.
         app.add_systems(Update, form_easy_client);
+
+        // Observer checks if our client closed it is main window if so
+        app.add_observer(on_app_exit_disconnect);
 
         // Debug
         app.register_type::<CoreEasyClient>();
@@ -127,6 +130,20 @@ fn build_client_plugin(client_id: &u64) -> ClientPlugins {
 /// Connect to the server
 fn connect_client(mut commands: Commands) {
     commands.connect_client();
+}
+
+///  When our app is closed we send a disconnect even to server
+fn on_app_exit_disconnect(
+    trigger: Trigger<OnAdd, ClosingWindow>,
+    easy_client: Res<CoreEasyClient>,
+    mut commands: Commands,
+) {
+    info!(
+        "Client it {} closed it is main window {} sending disconnect event",
+        easy_client.client_id,
+        trigger.entity()
+    );
+    commands.disconnect_client();
 }
 
 /// Forms one of the most essential resources for us a resource, that stores our client_id.
