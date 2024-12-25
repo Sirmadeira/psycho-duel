@@ -53,7 +53,7 @@ fn build_server_plugin() -> ServerPlugins {
             transport: ServerTransport::UdpSocket(SERVER_ADDR),
             ..default()
         },
-        config: NetcodeConfig::default(),
+        config: NetcodeConfig { ..default() },
     };
     let config = ServerConfig {
         // part of the config needs to be shared between the client and server

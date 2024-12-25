@@ -111,7 +111,11 @@ fn build_client_plugin(client_id: &u64) -> ClientPlugins {
         },
         // We can use either Steam (in which case we will use steam sockets and there is no need to specify
         // our own io) or Netcode (in which case we need to specify our own io).
-        config: NetcodeConfig::default(),
+        config: NetcodeConfig {
+            // Ensures that if we dont listend from a client in 3 seconds server kills his replication entity
+            client_timeout_secs: 3,
+            ..default()
+        },
     };
     let config = ClientConfig {
         // part of the config needs to be shared between the client and server
