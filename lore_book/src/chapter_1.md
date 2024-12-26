@@ -1,68 +1,68 @@
-# Chapter 1 - The Will of the Project 
-<!-- SIDENOTE THESE CHAPTERS ARE PIECES OF LORE -->
+# Chapter 1 - The Will of the Project  
 
-- Welcome to **Psycho Duel**, the arena awaits you here, you will go beyond, achieve greatness, and KNOW A WORLD *pauses*  
+**Figure:** Welcome to **Psycho Project**. The arena awaits you. Here, you will go beyond, achieve greatness, and KNOW A WORLD...  
+*pauses*  
 I am so tired of this... this false... hope?
 
-- What is your name again?  
-- **UNKNOWN**, well it seems you are just like me  **UNKNOWN**.  
+**Figure:** What is your name again?  
 
-Well?! Let’s see, ah yes... You have one sole task **UNKNOWN**, JUST climb the **Tower**. hehe................
+**Player:** **UNKNOWN.**
 
--**How**  
-how how how how how how how how how how how how HOW?
+**Figure:** Well, it seems you are just like me, **UNKNOWN**.  
+Well?! Let’s see, ah yes... You have one sole task, **UNKNOWN**. JUST climb the **Tower**. hehe...
 
-**Money**
-Is everything.  
-We need it to survive; those without it are worthless. It is about time you learned **THAT** lesson.
+**[silence]**
 
----
-**Power** 
-I wonder how you would get it...  
-Of course, you could kill those who **accept it**, but alone? No, not alone, impossible...
+**Player:** **How?**
 
----
-**Unity**  
-Alone, yes. I once was alone. We were... Not anymore it seens
+**[The air grows heavy.]**
 
-Unity is the way to ascension. Alone, a human can’t challenge the eternal climb.  
-A human will...
+**Figure:** I am JUST so tired, you know...
 
-**fall.**
+**[The air grows even heavier.]**
 
----
-**Creativity**  
-The Tower is a relentless mistress, but she does contain our **hope**, even **unwilling**.  
-Perhaps inside it, we can find... **CLIMB**
+**Figure:** OKAY! Okay... **[angrily]**
 
----
-**Determination**
+**Figure:** Money...
+Is everything. We need it to survive; those without it are worthless. It is about time you learned THAT lesson.  
+
+**Figure:** Power...  
+I wonder how you would get it... Of course, you could kill those who **accept it**, but alone? No, not alone, impossible...
+
+**Figure:** Unity... 
+Alone, yes. I once was alone. We were... Not anymore, it seems. Unity is the way to ascension. Alone, a human can’t challenge the eternal climb. A human will...
+
+**[extra tone here]** **fall.**
+
+**Figure:** Creativity...  
+The Tower is a relentless mistress, but she does contain our **hope**, even **unwilling**. Perhaps inside it, we can find... **CLIMB**
+
+**Figure:** Determination...  
 No, not here. Determination is nothing. The climb is unstoppable. We will never reach the end. We are **hopeless**. ONLY...
 
----
-**Discipline**  
+**Figure:** Discipline...  
 Discipline will help us. Through her, we climb. Through her, we find reason. Are we **drones**? Can’t we think?  
-**NO**, we can. **WE MUST THINK.** Thinkers see through...
+NO, we can. **WE MUST THINK.** Thinkers see through...
 
----
-**Gods**  
-LIE. THEY ARE ALL LIES.  
-The **Tower** is the only truth. Perhaps climbing it, we can try...  
-But it is so hard. So hard...
+**Figure:** Gods...  
+LIE. THEY ARE ALL LIES. The **Tower** is the only truth. Perhaps climbing it, we can try... But it is so hard. So hard...
 
----
-**Hardship**  
-The climb gets harder once you are reaching the top, if there is one...  
-Well, that is it. That is how you climb it.
+**Figure:** Hardship...  
+The climb gets harder once you are reaching the top—if there is one... Well, that is it. That is how you climb it.
 
-I hope I helped you. I am not sorry if I couldn’t. After all, you are one **OF THEM**?
+**Figure:** I hope I helped you. I am not sorry if I couldn’t; no point in trying harder... no point...  
+*pauses*
 
----
+**[The figure suddenly changes tone, urgency in their voice.]**
 
-#### DONT OBEY HIM 
-If you want to **survive**. 
-### Who  
-Who Who Who Who Who Who Who Who? YOU KNOW WHO GODAMMIT! 
----
-THE THE THE THE THE THE THE THE ?recnuonna. Yes... and as in queue, here he goes again...
+**Figure:** RENEMBER DON’T OBEY HIM. HELL, DON’T EVEN OBEY ME.
 
+**Figure:** If you want to **survive**—  
+
+**Player:** **Who?**   Who Who Who Who Who Who Who Who?
+
+**Figure:** YOU KNOW WHO, GODDAMMIT!  
+
+**Player:** **The... the... the...**  announ?
+
+**Figure:** Yes... and as if on queue, here he goes again...
