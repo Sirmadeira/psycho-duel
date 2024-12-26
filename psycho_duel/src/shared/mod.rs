@@ -19,8 +19,6 @@ pub struct CoreSharedPlugin;
 #[derive(Channel)]
 pub struct CommonChannel;
 
-// All mods in shared need to be pubbed
-pub mod diagnostic;
 pub mod egui;
 pub mod protocol;
 pub mod renderer;

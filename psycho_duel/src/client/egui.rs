@@ -6,14 +6,15 @@ use super::CommonChannel;
 
 use crate::client::{ClientAppState, CoreEasyClient};
 use crate::shared::protocol::Currency;
-use bevy::prelude::*;
-use bevy::window::PrimaryWindow;
+use bevy::{diagnostic::DiagnosticsStore, prelude::*, window::PrimaryWindow};
 use bevy_egui::{egui, EguiContext};
 use client::ClientCommands;
 use client::NetworkingState;
 use client::Predicted;
+use lightyear::client::prediction::diagnostics::PredictionDiagnosticsPlugin;
 use lightyear::prelude::*;
 use lightyear::shared::replication::components::Controlled;
+
 /// Client focused egui
 pub struct ClientEguiPlugin;
 
@@ -69,6 +70,7 @@ impl Plugin for ClientEguiPlugin {
                 currency_ui,
                 store_ui,
                 manage_connection_ui,
+                client_specific_diagnostics_ui,
             ),
         );
     }
@@ -405,6 +407,41 @@ fn manage_connection_ui(
                     }
                 }
             }
+        });
+    }
+}
+
+/// Mostly prediction related metrics like is there rollback, the amount of ticks resimulated and rollback depth
+/// Important somewhere in this code base those plugins were already added magically, so no need to readd prediction diagnostics
+fn client_specific_diagnostics_ui(
+    mut contexts: bevy_egui::EguiContexts,
+    diagnostics: Res<DiagnosticsStore>,
+) {
+    if let Some(egui_context) = contexts.try_ctx_mut() {
+        egui::Window::new("Prediction metrics").show(egui_context, |ui| {
+            let rb_count = diagnostics
+                .get(&PredictionDiagnosticsPlugin::ROLLBACKS)
+                .and_then(|rb| rb.value())
+                .map(|rb| format!("ROLLBACK AMOUNT: {:.2}", rb))
+                .unwrap_or_else(|| "Rollback amount data not available".to_string());
+
+            ui.label(rb_count);
+
+            let rb_t = diagnostics
+                .get(&PredictionDiagnosticsPlugin::ROLLBACK_TICKS)
+                .and_then(|rb| rb.value())
+                .map(|rb| format!("ROLLBACK TICK: {:>4.0}", rb))
+                .unwrap_or_else(|| "Rollback amount data not available".to_string());
+
+            ui.label(rb_t);
+
+            let rb_d = diagnostics
+                .get(&PredictionDiagnosticsPlugin::ROLLBACK_DEPTH)
+                .and_then(|rb| rb.value())
+                .map(|rb| format!("ROLLBACK DEPTH: {:>4.0}", rb))
+                .unwrap_or_else(|| "Rollback amount data not available".to_string());
+
+            ui.label(rb_d);
         });
     }
 }

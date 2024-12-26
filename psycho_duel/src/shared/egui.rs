@@ -1,7 +1,12 @@
-use bevy::prelude::*;
+use bevy::diagnostic::DiagnosticsStore;
 use bevy::window::PrimaryWindow;
+use bevy::{
+    diagnostic::{EntityCountDiagnosticsPlugin, FrameTimeDiagnosticsPlugin},
+    prelude::*,
+};
 use bevy_egui::{egui, EguiContext, EguiPlugin};
 use bevy_inspector_egui::DefaultInspectorConfigPlugin;
+
 /// Centralization plugin - Utilized to store all logic related to egui
 pub struct SharedEgui;
 
@@ -9,7 +14,12 @@ impl Plugin for SharedEgui {
     fn build(&self, app: &mut App) {
         app.add_plugins(EguiPlugin);
         app.add_plugins(DefaultInspectorConfigPlugin);
-        app.add_systems(Update, inspector_ui);
+
+        app.add_systems(Update, (inspector_ui, shared_diagnostics_ui));
+
+        // Bevy native diagnostics plugin - Those carry precious information
+        app.add_plugins(FrameTimeDiagnosticsPlugin::default());
+        app.add_plugins(EntityCountDiagnosticsPlugin::default());
     }
 }
 
@@ -52,4 +62,32 @@ fn inspector_ui(world: &mut World) {
     } else {
         return;
     };
+}
+
+/// A shared diagnostics ui that diplays key perfomance informations, this works via acessing diagnostic store,
+/// And grabing the given diagnostics from the plugin enums
+fn shared_diagnostics_ui(
+    mut contexts: bevy_egui::EguiContexts,
+    diagnostics: Res<DiagnosticsStore>,
+) {
+    if let Some(egui_context) = contexts.try_ctx_mut() {
+        egui::Window::new("Perfomance metrics").show(egui_context, |ui| {
+            // We want to display the values only if we are able to grab them
+            let fps = diagnostics
+                .get(&FrameTimeDiagnosticsPlugin::FPS)
+                .and_then(|fps| fps.smoothed())
+                .map(|fps| format!("FPS {:>4.0}", fps)) // Format the FPS if available
+                .unwrap_or_else(|| "FPS data not available".to_string()); // If not available return this string
+
+            ui.label(fps);
+
+            let entity_count = diagnostics
+                .get(&EntityCountDiagnosticsPlugin::ENTITY_COUNT)
+                .and_then(|ec| ec.value())
+                .map(|fps| format!("ENTITY AMOUNT {:>4.0}", fps))
+                .unwrap_or_else(|| "Entity AMOUNT data not available".to_string());
+
+            ui.label(entity_count);
+        });
+    }
 }

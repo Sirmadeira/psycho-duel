@@ -55,9 +55,7 @@ The climb gets harder once you are reaching the top—if there is one... Well, t
 
 **[The figure suddenly changes tone, urgency in their voice.]**
 
-**Figure:** RENEMBER DON’T OBEY HIM. HELL, DON’T EVEN OBEY ME.
-
-**Figure:** If you want to **survive**—  
+**Figure:** RENEMBER DON’T OBEY HIM.If you want to **survive**— 
 
 **Player:** **Who?**   Who Who Who Who Who Who Who Who?
 

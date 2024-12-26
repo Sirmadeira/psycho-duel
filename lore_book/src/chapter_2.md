@@ -21,7 +21,7 @@
 
 **Figure:** True believers, **accept it**, why don't you?
 
-**[Player]:** **NO NO NO NO**
+**Player:** **NO NO NO NO**
 
 **Figure:** C'mon, just a tad bit, just accept it—the **EMPTYNESS**. What good is the climb?
 
