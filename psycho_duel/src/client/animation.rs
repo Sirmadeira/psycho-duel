@@ -5,7 +5,7 @@ use bevy::{
 
 use super::{load_assets::GltfCollection, ClientAppState};
 
-/// Plugin responsible for animation
+/// Plugin responsible for animation on client
 pub struct ClientAnimationPlugin;
 
 /// Reponsible for giving me all the current available animations

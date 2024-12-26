@@ -6,10 +6,12 @@ use super::{
 };
 use crate::shared::protocol::*;
 use crate::shared::CommonChannel;
+use bevy::animation::AnimationTarget;
 use bevy::{prelude::*, utils::HashMap};
 use leafwing_input_manager::prelude::*;
 use lightyear::{client::prediction::Predicted, shared::events::components::MessageEvent};
 use lightyear::{prelude::*, shared::replication::components::Controlled};
+use std::collections::VecDeque;
 
 /// Centralization plugin - Everything correlated to player shall be inserted here
 pub struct ClientPlayerPlugin;
@@ -18,7 +20,7 @@ pub struct ClientPlayerPlugin;
 /// And to grab easily your predicted player
 #[derive(Resource, Reflect, Default)]
 #[reflect(Resource)]
-pub struct ClientIdPlayerMap {
+struct ClientIdPlayerMap {
     map: HashMap<ClientId, Entity>,
 }
 
@@ -26,8 +28,17 @@ pub struct ClientIdPlayerMap {
 /// when we receive the changechar event I dont want to play with lifelines in bevy it is insanely annoying that is why string
 #[derive(Resource, Default, Reflect)]
 #[reflect(Resource)]
-pub struct BodyPartMap {
+struct BodyPartMap {
     pub map: HashMap<(ClientId, String), Entity>,
+}
+
+/// Event send everytime we spawn a visual scene
+#[derive(Event, Reflect)]
+struct TranferAnim {
+    /// Tell me the id that need to transfer anim
+    id: ClientId,
+    /// Exact part name that I need to transfer too
+    part_name: String,
 }
 
 impl Plugin for ClientPlayerPlugin {
@@ -35,6 +46,9 @@ impl Plugin for ClientPlayerPlugin {
         // Init resources
         app.init_resource::<ClientIdPlayerMap>();
         app.init_resource::<BodyPartMap>();
+
+        // Init events
+        app.add_event::<TranferAnim>();
 
         // Update added systems, should only occur when we enter state in game. Any other way doesnt make sense currrently
         app.add_systems(
@@ -45,8 +59,11 @@ impl Plugin for ClientPlayerPlugin {
         // In observe because ideally this should be stateless
         app.add_observer(customize_local_player);
 
-        // In update because observer tend to be unstable (adds component in a disorderly fashion therefore it doesnt run sometime)
+        // In update because observer tends to be unstable (adds component in a disorderly fashion therefore it doesnt run sometimes)
         app.add_systems(Update, customize_player_on_other_clients);
+
+        // Transfering information from one bone to another
+        app.add_systems(PostUpdate, transfer_anim_info);
 
         // In update because we wanna keep checking this all the time when we do lobbies
         app.add_systems(Update, insert_input_map);
@@ -81,6 +98,7 @@ fn render_predicted_player(
     mut body_part_map: ResMut<BodyPartMap>,
     gltf_collection: Res<GltfCollection>,
     gltfs: Res<Assets<Gltf>>,
+    mut transfer_anim_writer: EventWriter<TranferAnim>,
     mut commands: Commands,
 ) {
     for (parent, player_id, player_visuals) in player.iter() {
@@ -97,6 +115,10 @@ fn render_predicted_player(
                     .map
                     .insert((player_id.id, item.file_path.clone()), entity);
             }
+            transfer_anim_writer.send(TranferAnim {
+                id: player_id.id.clone(),
+                part_name: item.name.to_string(),
+            });
         }
     }
 }
@@ -147,6 +169,7 @@ fn customize_local_player(
     gltf_collection: Res<GltfCollection>,
     gltfs: Res<Assets<Gltf>>,
     mut connection_manager: ResMut<ClientConnectionManager>,
+    mut transfer_anim_writer: EventWriter<TranferAnim>,
     mut commands: Commands,
 ) {
     let event = change_char.event();
@@ -178,6 +201,10 @@ fn customize_local_player(
     {
         warn!("Failed to send save to server!")
     }
+    transfer_anim_writer.send(TranferAnim {
+        id: client_id.clone(),
+        part_name: new_item.name.to_string(),
+    });
 }
 
 /// Validates if server gave the okay or not, after that we customize our other clients
@@ -189,6 +216,7 @@ fn customize_player_on_other_clients(
     mut body_part_map: ResMut<BodyPartMap>,
     opt_gltf_collection: Option<Res<GltfCollection>>,
     gltfs: Res<Assets<Gltf>>,
+    mut transfer_anim_writer: EventWriter<TranferAnim>,
     mut commands: Commands,
 ) {
     for event in save_message.read() {
@@ -211,6 +239,10 @@ fn customize_player_on_other_clients(
                     &gltfs,
                     &mut commands,
                 );
+                transfer_anim_writer.send(TranferAnim {
+                    id: client_id.clone(),
+                    part_name: new_item.name.to_string(),
+                });
             } else {
                 warn!("This client is most probably in a loading state")
             }
@@ -280,6 +312,121 @@ fn customize_player(
             client_id
         );
     }
+}
+
+/// Grabs player skeleton item, from him transfers all of his animation player and targets_id to visual bones, which are not animated
+fn transfer_anim_info(
+    mut transfer_anim: EventReader<TranferAnim>,
+    player_map: Res<ClientIdPlayerMap>,
+    children: Query<&Children>,
+    names: Query<&Name>,
+    animation_targets: Query<&AnimationTarget>,
+    mut commands: Commands,
+) {
+    for transfer in transfer_anim.read() {
+        let client_id = transfer.id;
+        let part_name = &transfer.part_name;
+
+        // Skeleton does not need to transfer animation as he already carries our animatoions
+        if part_name.contains("skeleton") {
+            return;
+        }
+
+        // Unwraps because it is pretty much impossible for predicted player to not be on map or skeleton to not be a child when triggering this guy
+        let player_ent = player_map.map.get(&client_id).unwrap();
+
+        //  Find player skeleton
+        let old_skeleton =
+            find_child_with_name_containing(&children, &names, player_ent, "skeleton").unwrap();
+
+        // Find his armature - First animation player is usually here
+        let old_armature =
+            find_child_with_name_containing(&children, &names, &old_skeleton, "Armature").unwrap();
+
+        // Insert his bones into a map
+        let mut old_bones = HashMap::new();
+        collect_bones(&children, &names, &old_armature, &mut old_bones);
+
+        // Part that needs to have it is children targets killed
+        let new_part =
+            find_child_with_name_containing(&children, &names, player_ent, &part_name).unwrap();
+
+        // Finding her animation player carries
+        let new_armature =
+            find_child_with_name_containing(&children, &names, &new_part, "Armature").unwrap();
+
+        // Insert new animation player version
+        commands
+            .entity(new_armature)
+            .insert(AnimationPlayer::default());
+
+        let mut new_bones = HashMap::new();
+        collect_bones(&children, &names, &new_armature, &mut new_bones);
+
+        // Tranfering animation targets
+        for (name, old_bone) in old_bones.iter() {
+            let old_animation_target = animation_targets
+                .get(*old_bone)
+                .expect("To have target if it doesnt well shit");
+
+            if let Some(corresponding_bone) = new_bones.get(name) {
+                commands
+                    .entity(*corresponding_bone)
+                    .insert(AnimationTarget {
+                        id: old_animation_target.id,
+                        player: new_armature,
+                    });
+            }
+        }
+    }
+}
+
+/// Collect all sub children bones of that specific part, usually starts by the armature bone
+fn collect_bones(
+    children_entities: &Query<&Children>,
+    names: &Query<&Name>,
+    root_bone: &Entity,
+    collected: &mut HashMap<String, Entity>,
+) {
+    if let Ok(name) = names.get(*root_bone) {
+        collected.insert(format!("{}", name), *root_bone);
+
+        if let Ok(children) = children_entities.get(*root_bone) {
+            for child in children {
+                collect_bones(children_entities, names, child, collected)
+            }
+        }
+    }
+}
+
+/// Helper Finds a bone with a certain name, from what I could see this is the most optimal way
+fn find_child_with_name_containing(
+    children: &Query<&Children>,
+    names: &Query<&Name>,
+    entity: &Entity,
+    name_to_match: &str,
+) -> Option<Entity> {
+    let mut queue = VecDeque::new();
+    queue.push_back(entity);
+
+    while let Some(curr_entity) = queue.pop_front() {
+        let name_result = names.get(*curr_entity);
+        if let Ok(name) = name_result {
+            if format!("{}", name).contains(name_to_match) {
+                // found the named entity
+                return Some(*curr_entity);
+            }
+        }
+
+        let children_result = children.get(*curr_entity);
+        if let Ok(children) = children_result {
+            for child in children {
+                queue.push_back(child)
+            }
+        }
+    }
+
+    return None;
 }
 
 /// Whenever we get a predicted entity that is controlled we add the input map unto it
