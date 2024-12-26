@@ -1,3 +1,4 @@
+use crate::client::animation::ClientAnimationPlugin;
 use crate::client::load_assets::LoadAssetsPlugin;
 use crate::server::SERVER_ADDR;
 use crate::shared::*;
@@ -40,6 +41,7 @@ pub struct CoreEasyClient {
 
 pub mod camera;
 // This guy is public because we need to share the Parts struct with the impl on shared
+mod animation;
 pub mod egui;
 mod load_assets;
 mod player;
@@ -67,6 +69,7 @@ impl Plugin for CoreClientPlugin {
         app.add_plugins(ClientWorldPlugin);
         app.add_plugins(LoadAssetsPlugin);
         app.add_plugins(SkyboxPlugin);
+        app.add_plugins(ClientAnimationPlugin);
 
         // Initializing center state of client
         app.init_state::<ClientAppState>();
