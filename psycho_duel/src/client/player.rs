@@ -1,5 +1,5 @@
 use super::{
-    egui::{ChangeCharEvent, Parts},
+    egui::ChangeCharEvent,
     load_assets::GltfCollection,
     protocol::{PlayerId, PlayerMarker, PlayerVisuals},
     ClientAppState,
@@ -31,14 +31,37 @@ struct ClientIdPlayerMap {
 struct BodyPartMap {
     pub map: HashMap<(ClientId, String), Entity>,
 }
+impl BodyPartMap {
+    /// Function that give me a vector of all
+    pub fn find_part_of_client_id(&self, client_id: &ClientId) -> Vec<Entity> {
+        self.map
+            .iter()
+            .filter_map(
+                |((id, _part_name), entity)| {
+                    if id == client_id {
+                        Some(*entity)
+                    } else {
+                        None
+                    }
+                },
+            )
+            .collect()
+    }
+}
 
 /// Event send everytime we spawn a visual scene
-#[derive(Event, Reflect)]
+#[derive(Event)]
 struct TranferAnim {
     /// Tell me the id that need to transfer anim
     id: ClientId,
     /// Exact part name that I need to transfer too
     part_name: String,
+}
+
+//A simple notification event utilized to reset all animation player when a player customize his character
+#[derive(Event)]
+struct ResetAnim {
+    id: ClientId,
 }
 
 impl Plugin for ClientPlayerPlugin {
@@ -49,6 +72,7 @@ impl Plugin for ClientPlayerPlugin {
 
         // Init events
         app.add_event::<TranferAnim>();
+        app.add_event::<ResetAnim>();
 
         // Update added systems, should only occur when we enter state in game. Any other way doesnt make sense currrently
         app.add_systems(
@@ -56,7 +80,7 @@ impl Plugin for ClientPlayerPlugin {
             (fill_client_id_map, render_predicted_player).run_if(in_state(ClientAppState::Game)),
         );
 
-        // In observe because ideally this should be stateless
+        // In observe because right now this is stateless
         app.add_observer(customize_local_player);
 
         // In update because observer tends to be unstable (adds component in a disorderly fashion therefore it doesnt run sometimes)
@@ -65,7 +89,10 @@ impl Plugin for ClientPlayerPlugin {
         // In post update because observer are too fast paced - And because we want all bones to be spawned. Which takes a while
         app.add_systems(PostUpdate, transfer_anim_info);
 
-        // In update because we wanna keep checkin that all the time and again observers are too fast paced in this scenario
+        // In update because reset anim requires apply deferred, but doesnt care about schedule
+        app.add_systems(Update, reset_anim);
+
+        // In update because observers tend to be disorder
         app.add_systems(Update, insert_input_map);
 
         // Fixed update because input systems should be frame unrelated
@@ -163,7 +190,7 @@ fn spawn_visual_scene(
 /// -> Why predicted player? Well because we solely want to change predicted entities via client, confirmed are the ones altered by server!
 fn customize_local_player(
     change_char: Trigger<ChangeCharEvent>,
-    mut player_visuals: Query<&mut PlayerVisuals, With<Predicted>>,
+    player_visuals: Query<&mut PlayerVisuals, With<Predicted>>,
     player_map: Res<ClientIdPlayerMap>,
     mut body_part_map: ResMut<BodyPartMap>,
     gltf_collection: Res<GltfCollection>,
@@ -178,40 +205,59 @@ fn customize_local_player(
     let new_item = &event.item;
     let body_part = &event.body_part;
 
-    customize_player(
-        client_id,
-        body_part,
-        new_item,
-        &mut player_visuals,
-        &player_map,
-        &mut body_part_map,
-        &gltf_collection,
-        &gltfs,
-        &mut commands,
-    );
+    if let Some(player_entity) = player_map.map.get(client_id) {
+        // Grab the player's current visuals not mutably server needs to validate to despawn player entity
+        let player_visual = player_visuals
+            .get(*player_entity)
+            .expect("Player to be online and to have visual component");
 
-    if connection_manager
-        .send_message::<CommonChannel, SaveMessage>(&mut SaveMessage {
-            id: *client_id,
-            change_char: Some(event.clone()),
-            change_currency: None,
-            change_inventory: None,
-        })
-        .is_err()
-    {
-        warn!("Failed to send save to server!")
+        // Determine the current part
+        let current_item = player_visual.get_visual(body_part);
+        let curr_file_path = &current_item.file_path;
+        let new_file_path = &new_item.file_path;
+        if curr_file_path != new_file_path {
+            customize_player(
+                client_id,
+                new_item,
+                curr_file_path,
+                new_file_path,
+                &player_entity,
+                &mut body_part_map,
+                &gltf_collection,
+                &gltfs,
+                &mut commands,
+            );
+            if connection_manager
+                .send_message::<CommonChannel, SaveMessage>(&mut SaveMessage {
+                    id: *client_id,
+                    change_char: Some(event.clone()),
+                    change_currency: None,
+                    change_inventory: None,
+                })
+                .is_err()
+            {
+                warn!("Failed to send save to server!")
+            }
+            transfer_anim_writer.send(TranferAnim {
+                id: client_id.clone(),
+                part_name: new_item.name.to_string(),
+            });
+        } else {
+            info!(
+                "Visual item '{}' for client {} is already current; no changes made",
+                curr_file_path, client_id
+            );
+        }
+    } else {
+        warn!("Couldnt find predicted player somethins is terribly wrongs")
     }
-    transfer_anim_writer.send(TranferAnim {
-        id: client_id.clone(),
-        part_name: new_item.name.to_string(),
-    });
 }
 
 /// Validates if server gave the okay or not, after that we customize our other clients
 /// Only applies customization logic, even tho it captures save message
 fn customize_player_on_other_clients(
     mut save_message: EventReader<MessageEvent<SaveMessage>>,
-    mut player_visuals: Query<&mut PlayerVisuals, With<Predicted>>,
+    player_visuals: Query<&mut PlayerVisuals, With<Predicted>>,
     player_map: Res<ClientIdPlayerMap>,
     mut body_part_map: ResMut<BodyPartMap>,
     opt_gltf_collection: Option<Res<GltfCollection>>,
@@ -226,14 +272,24 @@ fn customize_player_on_other_clients(
             let client_id = &message.id;
             let body_part = &change_char.body_part;
             let new_item = &change_char.item;
+            let player_entity = player_map.map.get(client_id).unwrap();
+
+            // Server already mutated it
+            let player_visual = player_visuals
+                .get(*player_entity)
+                .expect("Player to be online and to have visual component");
+
+            let current_item = player_visual.get_visual(body_part);
+            let curr_file_path = &current_item.file_path;
+            let new_file_path = &new_item.file_path;
 
             if let Some(gltf_collection) = &opt_gltf_collection {
                 customize_player(
                     client_id,
-                    body_part,
                     new_item,
-                    &mut player_visuals,
-                    &player_map,
+                    curr_file_path,
+                    new_file_path,
+                    &player_entity,
                     &mut body_part_map,
                     &gltf_collection,
                     &gltfs,
@@ -252,71 +308,40 @@ fn customize_player_on_other_clients(
 
 fn customize_player(
     client_id: &ClientId,
-    body_part: &Parts,
     new_item: &Item,
-    player_visuals: &mut Query<&mut PlayerVisuals, With<Predicted>>,
-    player_map: &Res<ClientIdPlayerMap>,
+    curr_file_path: &String,
+    new_file_path: &String,
+    parent_ent: &Entity,
     body_part_map: &mut ResMut<BodyPartMap>,
     gltf_collection: &Res<GltfCollection>,
     gltfs: &Res<Assets<Gltf>>,
     mut commands: &mut Commands,
 ) {
-    // Finding player entity via map
-    if let Some(entity) = player_map.map.get(client_id) {
-        // Grab the player's current visuals not mutably server needs to validate
-        let player_visual = player_visuals
-            .get(*entity)
-            .expect("Player to be online and to have visual component");
+    // Removing old part from the map
+    let key = (*client_id, curr_file_path.to_string());
+    if let Some(entity) = body_part_map.map.remove(&key) {
+        info!("Removing old body part from entity {}", entity);
+        commands.entity(entity).despawn_recursive();
+    }
 
-        // Determine the current part
-        let current_item = player_visual.get_visual(body_part);
-        let curr_file_path = &current_item.file_path;
-        let new_file_path = &new_item.file_path;
+    // Spawn new visual scene and insert into the map
+    if let Some(id) = spawn_visual_scene(&new_item, &gltf_collection, &gltfs, &mut commands) {
+        info!("Spawning new visual scene for {}", client_id);
+        body_part_map
+            .map
+            .insert((*client_id, new_file_path.to_string()), id);
 
-        // Only proceed if the new part is different from current in player visual
-        if curr_file_path != new_file_path {
-            info!(
-                "Changed {:?} visual item for client {:?} from '{}' to '{}'",
-                body_part, client_id, curr_file_path, new_file_path
-            );
-
-            // Removing old part from the map
-            let key = (*client_id, curr_file_path.to_string());
-            if let Some(entity) = body_part_map.map.remove(&key) {
-                info!("Removing old body part from entity {}", entity);
-                commands.entity(entity).despawn_recursive();
-            }
-
-            // Spawn new visual scene and insert into the map
-            if let Some(id) = spawn_visual_scene(&new_item, &gltf_collection, &gltfs, &mut commands)
-            {
-                info!("Spawning new visual scene for {}", client_id);
-                body_part_map
-                    .map
-                    .insert((*client_id, new_file_path.to_string()), id);
-
-                // Make player parent of the new spawned scene
-                commands.entity(id).set_parent(*entity);
-            } else {
-                panic!("Something went wrong spawning new visual scene");
-            }
-        } else {
-            info!(
-                "Visual item '{}' for client {} is already current; no changes made",
-                curr_file_path, client_id
-            );
-        }
+        // Make player parent of the new spawned scene
+        commands.entity(id).set_parent(*parent_ent);
     } else {
-        warn!(
-            "Something went terribly wrong; couldn't find client_id {} player entity",
-            client_id
-        );
+        panic!("Something went wrong spawning new visual scene");
     }
 }
 
 /// Grabs player skeleton item, from him transfers all of his animation player and targets_id to visual bones, which are not animated
 fn transfer_anim_info(
     mut transfer_anim: EventReader<TranferAnim>,
+    mut reset_anim: EventWriter<ResetAnim>,
     player_map: Res<ClientIdPlayerMap>,
     children: Query<&Children>,
     names: Query<&Name>,
@@ -378,6 +403,7 @@ fn transfer_anim_info(
                     });
             }
         }
+        reset_anim.send(ResetAnim { id: client_id });
     }
 }
 
@@ -399,7 +425,7 @@ fn collect_bones(
     }
 }
 
-/// Helper Finds a bone with a certain name, from what I could see this is the most optimal way
+/// Helper Finds a bone with a certain name, from what I could see this is the most optimal way of finding a specifically named child
 fn find_child_with_name_containing(
     children: &Query<&Children>,
     names: &Query<&Name>,
@@ -427,6 +453,27 @@ fn find_child_with_name_containing(
     }
 
     return None;
+}
+
+/// Receives the reset animation event reset all of the child animation player
+fn reset_anim(
+    mut reset_reader: EventReader<ResetAnim>,
+    player_map: Res<BodyPartMap>,
+    children: Query<&Children>,
+    names: Query<&Name>,
+    mut animation_player: Query<&mut AnimationPlayer>,
+) {
+    for event in reset_reader.read() {
+        let client_id = event.id;
+        // Unwrap again because of how unprobable this  is
+        for body_part in player_map.find_part_of_client_id(&client_id) {
+            // Renember armatures usually carry our animations players and they should always exist from blender
+            let ent =
+                find_child_with_name_containing(&children, &names, &body_part, "Armature").unwrap();
+            let mut anim_play = animation_player.get_mut(ent).unwrap();
+            anim_play.rewind_all();
+        }
+    }
 }
 
 /// Whenever we get a predicted entity that is controlled we add the input map unto it
