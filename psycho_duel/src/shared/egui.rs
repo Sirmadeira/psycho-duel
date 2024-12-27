@@ -1,10 +1,10 @@
-use crate::shared::egui::egui::Align2;
 use bevy::diagnostic::DiagnosticsStore;
 use bevy::window::PrimaryWindow;
 use bevy::{
     diagnostic::{EntityCountDiagnosticsPlugin, FrameTimeDiagnosticsPlugin},
     prelude::*,
 };
+use bevy_egui::egui::Align2;
 use bevy_egui::{egui, EguiContext, EguiPlugin};
 use bevy_inspector_egui::DefaultInspectorConfigPlugin;
 

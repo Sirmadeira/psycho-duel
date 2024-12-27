@@ -7,7 +7,6 @@ use super::CommonChannel;
 use crate::client::{ClientAppState, CoreEasyClient};
 use crate::shared::protocol::Currency;
 use bevy::{diagnostic::DiagnosticsStore, prelude::*, window::PrimaryWindow};
-use bevy_egui::egui::Align2;
 use bevy_egui::{egui, EguiContext};
 use client::ClientCommands;
 use client::NetworkingState;
