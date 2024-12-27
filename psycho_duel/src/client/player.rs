@@ -62,10 +62,10 @@ impl Plugin for ClientPlayerPlugin {
         // In update because observer tends to be unstable (adds component in a disorderly fashion therefore it doesnt run sometimes)
         app.add_systems(Update, customize_player_on_other_clients);
 
-        // Transfering information from one bone to another
+        // In post update because observer are too fast paced - And because we want all bones to be spawned. Which takes a while
         app.add_systems(PostUpdate, transfer_anim_info);
 
-        // In update because we wanna keep checking this all the time when we do lobbies
+        // In update because we wanna keep checkin that all the time and again observers are too fast paced in this scenario
         app.add_systems(Update, insert_input_map);
 
         // Fixed update because input systems should be frame unrelated

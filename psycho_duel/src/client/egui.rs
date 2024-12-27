@@ -7,6 +7,7 @@ use super::CommonChannel;
 use crate::client::{ClientAppState, CoreEasyClient};
 use crate::shared::protocol::Currency;
 use bevy::{diagnostic::DiagnosticsStore, prelude::*, window::PrimaryWindow};
+use bevy_egui::egui::Align2;
 use bevy_egui::{egui, EguiContext};
 use client::ClientCommands;
 use client::NetworkingState;
@@ -128,7 +129,7 @@ fn inspector_ui(world: &mut World) {
 /// A developer egui utilized to limit test our game character customizer
 fn char_customizer_ui(
     mut contexts: bevy_egui::EguiContexts,
-    local_player: Query<&PlayerId, (With<Predicted>, With<Controlled>)>,
+    local_player: Query<&PlayerId, (With<Predicted>, With<Controlled>, With<PlayerMarker>)>,
     mut selected_button: Local<Parts>,
     mut commands: Commands,
 ) {
@@ -140,6 +141,7 @@ fn char_customizer_ui(
             let selected_button = selected_button.deref_mut();
             egui::Window::new("Char customizer")
                 .default_open(false)
+                .default_pos((250.0, 0.0))
                 .show(egui_context, |ui| {
                     egui::ScrollArea::both().show(ui, |ui| {
                         ui.label("Part to change");
@@ -216,6 +218,7 @@ fn currency_ui(
             // Use the egui context
             egui::Window::new("Currency mechanics")
                 .default_open(false)
+                .default_pos((450.0, 0.0))
                 .show(egui_context, |ui| {
                     ui.heading(format!("Total amount {}", current_currency.amount));
                     if ui.button("Gain currency").clicked() {
@@ -276,6 +279,7 @@ fn store_ui(
                 // Render the store UI
                 egui::Window::new("Store")
                     .default_open(false)
+                    .default_pos((700.0, 0.0))
                     .show(egui_context, |ui| {
                         egui::ScrollArea::both().show(ui, |ui| {
                             ui.horizontal(|ui| {
@@ -391,8 +395,10 @@ fn manage_connection_ui(
     mut commands: Commands,
 ) {
     if let Some(egui_context) = contexts.try_ctx_mut() {
-        egui::Window::new("Manage connections").show(&egui_context, |ui| {
-            match network_state.get() {
+        egui::Window::new("Manage connections")
+            .default_pos((250.0, 50.0))
+            .default_open(false)
+            .show(&egui_context, |ui| match network_state.get() {
                 NetworkingState::Connected => {
                     if ui.button("Disconnect client").clicked() {
                         commands.disconnect_client();
@@ -406,42 +412,43 @@ fn manage_connection_ui(
                         commands.connect_client();
                     }
                 }
-            }
-        });
+            });
     }
 }
 
-/// Mostly prediction related metrics like is there rollback, the amount of ticks resimulated and rollback depth
-/// Important somewhere in this code base those plugins were already added magically, so no need to readd prediction diagnostics
+/// Client specific needed information things like rollback ticks, rollback depth, and amount of rollbacks should be stored here
 fn client_specific_diagnostics_ui(
     mut contexts: bevy_egui::EguiContexts,
     diagnostics: Res<DiagnosticsStore>,
 ) {
     if let Some(egui_context) = contexts.try_ctx_mut() {
-        egui::Window::new("Prediction metrics").show(egui_context, |ui| {
-            let rb_count = diagnostics
-                .get(&PredictionDiagnosticsPlugin::ROLLBACKS)
-                .and_then(|rb| rb.value())
-                .map(|rb| format!("ROLLBACK AMOUNT: {:.2}", rb))
-                .unwrap_or_else(|| "Rollback amount data not available".to_string());
+        egui::Window::new("Prediction metrics")
+            .default_pos((500.0, 50.0))
+            .default_open(false)
+            .show(egui_context, |ui| {
+                let rb_count = diagnostics
+                    .get(&PredictionDiagnosticsPlugin::ROLLBACKS)
+                    .and_then(|rb| rb.value())
+                    .map(|rb| format!("ROLLBACK AMOUNT: {:.2}", rb))
+                    .unwrap_or_else(|| "Rollback amount data not available".to_string());
 
-            ui.label(rb_count);
+                ui.label(rb_count);
 
-            let rb_t = diagnostics
-                .get(&PredictionDiagnosticsPlugin::ROLLBACK_TICKS)
-                .and_then(|rb| rb.value())
-                .map(|rb| format!("ROLLBACK TICK: {:>4.0}", rb))
-                .unwrap_or_else(|| "Rollback amount data not available".to_string());
+                let rb_t = diagnostics
+                    .get(&PredictionDiagnosticsPlugin::ROLLBACK_TICKS)
+                    .and_then(|rb| rb.value())
+                    .map(|rb| format!("ROLLBACK TICK: {:>4.0}", rb))
+                    .unwrap_or_else(|| "Rollback amount data not available".to_string());
 
-            ui.label(rb_t);
+                ui.label(rb_t);
 
-            let rb_d = diagnostics
-                .get(&PredictionDiagnosticsPlugin::ROLLBACK_DEPTH)
-                .and_then(|rb| rb.value())
-                .map(|rb| format!("ROLLBACK DEPTH: {:>4.0}", rb))
-                .unwrap_or_else(|| "Rollback amount data not available".to_string());
+                let rb_d = diagnostics
+                    .get(&PredictionDiagnosticsPlugin::ROLLBACK_DEPTH)
+                    .and_then(|rb| rb.value())
+                    .map(|rb| format!("ROLLBACK DEPTH: {:>4.0}", rb))
+                    .unwrap_or_else(|| "Rollback amount data not available".to_string());
 
-            ui.label(rb_d);
-        });
+                ui.label(rb_d);
+            });
     }
 }

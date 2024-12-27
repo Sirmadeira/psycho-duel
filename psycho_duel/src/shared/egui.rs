@@ -1,3 +1,4 @@
+use crate::shared::egui::egui::Align2;
 use bevy::diagnostic::DiagnosticsStore;
 use bevy::window::PrimaryWindow;
 use bevy::{
@@ -71,23 +72,26 @@ fn shared_diagnostics_ui(
     diagnostics: Res<DiagnosticsStore>,
 ) {
     if let Some(egui_context) = contexts.try_ctx_mut() {
-        egui::Window::new("Perfomance metrics").show(egui_context, |ui| {
-            // We want to display the values only if we are able to grab them
-            let fps = diagnostics
-                .get(&FrameTimeDiagnosticsPlugin::FPS)
-                .and_then(|fps| fps.smoothed())
-                .map(|fps| format!("FPS {:>4.0}", fps)) // Format the FPS if available
-                .unwrap_or_else(|| "FPS data not available".to_string()); // If not available return this string
+        egui::Window::new("Perfomance metrics")
+            .default_open(false)
+            .anchor(Align2::RIGHT_TOP, (-250.0, 0.0))
+            .show(egui_context, |ui| {
+                // We want to display the values only if we are able to grab them
+                let fps = diagnostics
+                    .get(&FrameTimeDiagnosticsPlugin::FPS)
+                    .and_then(|fps| fps.smoothed())
+                    .map(|fps| format!("FPS {:>4.0}", fps)) // Format the FPS if available
+                    .unwrap_or_else(|| "FPS data not available".to_string()); // If not available return this string
 
-            ui.label(fps);
+                ui.label(fps);
 
-            let entity_count = diagnostics
-                .get(&EntityCountDiagnosticsPlugin::ENTITY_COUNT)
-                .and_then(|ec| ec.value())
-                .map(|fps| format!("ENTITY AMOUNT {:>4.0}", fps))
-                .unwrap_or_else(|| "Entity AMOUNT data not available".to_string());
+                let entity_count = diagnostics
+                    .get(&EntityCountDiagnosticsPlugin::ENTITY_COUNT)
+                    .and_then(|ec| ec.value())
+                    .map(|fps| format!("ENTITY AMOUNT {:>4.0}", fps))
+                    .unwrap_or_else(|| "Entity AMOUNT data not available".to_string());
 
-            ui.label(entity_count);
-        });
+                ui.label(entity_count);
+            });
     }
 }
