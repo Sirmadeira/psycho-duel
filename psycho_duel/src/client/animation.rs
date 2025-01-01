@@ -35,8 +35,8 @@ fn setup_animation_resource(
 ) {
     let skeleton_han = gltf_collection
         .gltf_files
-        .get("characters/anim_skeletons/main_skeleton.glb")
-        .expect("To have animations in main skeleton");
+        .get("characters/anim_skeletons/def_m_main_skeleton.glb")
+        .expect("To find animation skeleton");
 
     let skeleton = gltf_assets.get(skeleton_han).unwrap();
 
@@ -66,7 +66,7 @@ fn play_animations(
     for (entity, mut player) in players.iter_mut() {
         info!("Add animation");
         let mut transitions = AnimationTransitions::new();
-        let new_animation = animations.named_node.get("Sword_Slash").unwrap();
+        let new_animation = animations.named_node.get("IDLE_BEGIN").unwrap();
         transitions
             .play(&mut player, *new_animation, Duration::ZERO)
             .repeat();
