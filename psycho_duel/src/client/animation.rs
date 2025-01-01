@@ -64,7 +64,6 @@ fn play_animations(
     mut commands: Commands,
 ) {
     for (entity, mut player) in players.iter_mut() {
-        info!("Add animation");
         let mut transitions = AnimationTransitions::new();
         let new_animation = animations.named_node.get("IDLE_BEGIN").unwrap();
         transitions

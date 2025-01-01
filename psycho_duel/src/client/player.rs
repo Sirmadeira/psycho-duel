@@ -90,7 +90,7 @@ impl Plugin for ClientPlayerPlugin {
         app.add_systems(PostUpdate, transfer_anim_info);
 
         // In update because reset anim requires apply deferred, but doesnt care about schedule
-        // app.add_systems(Update, reset_anim);
+        app.add_systems(Update, reset_anim);
 
         // In update because observers tend to be disorder
         app.add_systems(Update, insert_input_map);
@@ -456,6 +456,7 @@ fn find_child_with_name_containing(
 }
 
 /// Receives the reset animation event reset all of the child animation player
+/// This must occur every time we spawn our entities
 fn reset_anim(
     mut reset_reader: EventReader<ResetAnim>,
     player_map: Res<BodyPartMap>,
@@ -465,13 +466,22 @@ fn reset_anim(
 ) {
     for event in reset_reader.read() {
         let client_id = event.id;
+
         // Unwrap again because of how unprobable this  is
         for body_part in player_map.find_part_of_client_id(&client_id) {
+            // Should always have a name
+            let part_name = names.get(body_part).unwrap();
+            if part_name.contains("skeleton") {
+                return;
+            }
             // Renember root usually carry our animations players and they should always exist from blender
             let ent =
                 find_child_with_name_containing(&children, &names, &body_part, "Root").unwrap();
-            let mut anim_play = animation_player.get_mut(ent).unwrap();
-            anim_play.rewind_all();
+            if let Ok(mut anim_play) = animation_player.get_mut(ent) {
+                anim_play.rewind_all();
+            } else {
+                info!("{}", ent);
+            }
         }
     }
 }
