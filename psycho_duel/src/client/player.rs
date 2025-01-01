@@ -338,7 +338,9 @@ fn customize_player(
     }
 }
 
-/// Grabs player skeleton item, from him transfers all of his animation player and targets_id to visual bones, which are not animated
+/// Transfer anim target ids, from each main skeleton bone to visual bone
+/// Warning this expects - Visual scenes to have sub bones called root
+/// And that main skeleton has it is first part named armature
 fn transfer_anim_info(
     mut transfer_anim: EventReader<TranferAnim>,
     mut reset_anim: EventWriter<ResetAnim>,
@@ -376,17 +378,15 @@ fn transfer_anim_info(
         let new_part =
             find_child_with_name_containing(&children, &names, player_ent, &part_name).unwrap();
 
-        // Finding her animation player carries
-        let new_armature =
-            find_child_with_name_containing(&children, &names, &new_part, "Armature").unwrap();
+        // Carrier of anim player should be named root by default
+        let new_root =
+            find_child_with_name_containing(&children, &names, &new_part, "Root").unwrap();
 
         // Insert new animation player version
-        commands
-            .entity(new_armature)
-            .insert(AnimationPlayer::default());
+        commands.entity(new_root).insert(AnimationPlayer::default());
 
         let mut new_bones = HashMap::new();
-        collect_bones(&children, &names, &new_armature, &mut new_bones);
+        collect_bones(&children, &names, &new_root, &mut new_bones);
 
         // Tranfering animation targets
         for (name, old_bone) in old_bones.iter() {
@@ -399,7 +399,7 @@ fn transfer_anim_info(
                     .entity(*corresponding_bone)
                     .insert(AnimationTarget {
                         id: old_animation_target.id,
-                        player: new_armature,
+                        player: new_root,
                     });
             }
         }
