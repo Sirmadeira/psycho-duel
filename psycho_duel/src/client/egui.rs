@@ -26,24 +26,18 @@ pub enum Parts {
     Head,
     Torso,
     Leg,
+    Arm,
 }
 
 /// Static string references =  dont expect this variable to change mid system running
 /// Technically this are the paths to all available items, just increase this guy to adjust ui button
-const HEAD_PATHS: [&'static str; 2] = [
-    "characters/visual_parts/suit_head.glb",
-    "characters/visual_parts/soldier_head.glb",
-];
+const HEAD_PATHS: [&'static str; 1] = ["characters/visual_parts/def_m_head.glb"];
 
-const TORSO_PATHS: [&'static str; 2] = [
-    "characters/visual_parts/scifi_torso.glb",
-    "characters/visual_parts/soldier_torso.glb",
-];
+const TORSO_PATHS: [&'static str; 1] = ["characters/visual_parts/def_m_torso.glb"];
 
-const LEG_PATHS: [&'static str; 2] = [
-    "characters/visual_parts/witch_legs.glb",
-    "characters/visual_parts/soldier_legs.glb",
-];
+const LEG_PATHS: [&'static str; 1] = ["characters/visual_parts/def_m_legs.glb"];
+
+const ARM_PATHS: [&'static str; 1] = ["characters/visual_parts/def_m_arms.glb"];
 
 /// Carrier of information usefull for our char customizer
 #[derive(Event, Serialize, Deserialize, Debug, Clone, PartialEq)]
@@ -159,6 +153,7 @@ fn char_customizer_ui(
                             Parts::Head => &HEAD_PATHS,
                             Parts::Torso => &TORSO_PATHS,
                             Parts::Leg => &LEG_PATHS,
+                            Parts::Arm => &ARM_PATHS,
                         };
 
                         // Here we intake ref because we dont wannt to consume file path const

@@ -164,6 +164,8 @@ pub struct PlayerVisuals {
     pub torso: Item,
     /// Character available legs
     pub leg: Item,
+    // Character available arm
+    pub arm: Item,
     /// Character available weapon
     pub weapon_1: Item,
 }
@@ -171,11 +173,12 @@ pub struct PlayerVisuals {
 impl Default for PlayerVisuals {
     fn default() -> Self {
         Self {
-            head: Item::new_from_filepath("characters/visual_parts/suit_head.glb"),
-            torso: Item::new_from_filepath("characters/visual_parts/scifi_torso.glb"),
-            leg: Item::new_from_filepath("characters/visual_parts/witch_legs.glb"),
+            head: Item::new_from_filepath("characters/visual_parts/def_m_head.glb"),
+            torso: Item::new_from_filepath("characters/visual_parts/def_m_torso.glb"),
+            leg: Item::new_from_filepath("characters/visual_parts/def_m_legs.glb"),
+            arm: Item::new_from_filepath("characters/visual_parts/def_m_arms.glb"),
             weapon_1: Item::new_from_filepath("weapons/katana.glb"),
-            skeleton: Item::new_from_filepath("characters/anim_skeletons/main_skeleton.glb"),
+            skeleton: Item::new_from_filepath("characters/anim_skeletons/def_m_main_skeleton.glb"),
         }
     }
 }
@@ -183,7 +186,14 @@ impl Default for PlayerVisuals {
 impl PlayerVisuals {
     /// Returns an iterator over the visual components. Good iterator for when spawning first the entity
     pub fn iter_visuals(&self) -> impl Iterator<Item = &Item> {
-        vec![&self.head, &self.torso, &self.leg, &self.skeleton].into_iter()
+        vec![
+            &self.head,
+            &self.torso,
+            &self.leg,
+            &self.arm,
+            &self.skeleton,
+        ]
+        .into_iter()
     }
     /// Returns a reference to the visual component corresponding to the given`Parts` enum
     /// Avoids the usage of uncessary match statements
@@ -192,6 +202,7 @@ impl PlayerVisuals {
             Parts::Head => &self.head,
             Parts::Torso => &self.torso,
             Parts::Leg => &self.leg,
+            Parts::Arm => &self.arm,
         }
     }
     /// Returns a mutable reference to the visual component corresponding to the given`Parts` enum
@@ -201,6 +212,7 @@ impl PlayerVisuals {
             Parts::Head => &mut self.head,
             Parts::Torso => &mut self.torso,
             Parts::Leg => &mut self.leg,
+            Parts::Arm => &mut self.arm,
         }
     }
 }
