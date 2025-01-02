@@ -1,6 +1,5 @@
 use super::protocol::PlayerMarker;
 use bevy::prelude::*;
-use bevy::render::camera::CameraUpdateSystem;
 use bevy_panorbit_camera::{PanOrbitCamera, PanOrbitCameraPlugin, PanOrbitCameraSystemSet};
 use lightyear::prelude::client::Predicted;
 use lightyear::shared::replication::components::Controlled;
@@ -35,10 +34,21 @@ impl Plugin for ClientCameraPlugin {
         app.add_plugins(PanOrbitCameraPlugin);
         // Should occur right in the early stages
         app.add_systems(Startup, spawn_camera);
-        // In pre update for responsiveness when toggled in the same frame i want to adjust
-        app.add_systems(PreUpdate, toggle_cam_follow);
-        // In update
-        app.add_systems(Update, cam_follow_player.run_if(rc_follow_player));
+        // In pre update for responsiveness when toggled in the same frame i want to adjust run condition checks if there is a player to follow
+        app.add_systems(
+            PostUpdate,
+            toggle_cam_follow
+                .before(cam_follow_player)
+                .run_if(rc_player_exists),
+        );
+        // In update rc check if it should follow and if there is one to follow
+        app.add_systems(
+            PostUpdate,
+            cam_follow_player
+                .before(PanOrbitCameraSystemSet)
+                .run_if(rc_follow_player)
+                .run_if(rc_player_exists),
+        );
 
         // Debug register
         app.register_type::<CamFeatures>();
@@ -50,6 +60,17 @@ impl Plugin for ClientCameraPlugin {
 fn rc_follow_player(cam_q: Query<&CamFeatures, With<MarkerPrimaryCamera>>) -> bool {
     if let Ok(cam_feat) = cam_q.get_single() {
         cam_feat.follow_player_condition
+    } else {
+        false
+    }
+}
+
+/// Run condition - Made it so we check if we have a player available to follow if we dont we cannnot togglle cam follow or run cam follow player
+fn rc_player_exists(
+    player_q: Query<Entity, (With<PlayerMarker>, With<Predicted>, With<Controlled>)>,
+) -> bool {
+    if let Ok(_) = player_q.get_single() {
+        true
     } else {
         false
     }
