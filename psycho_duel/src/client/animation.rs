@@ -49,6 +49,7 @@ fn setup_animation_resource(
     let mut animation_graph = AnimationGraph::new();
 
     for (animation_name, clip) in skeleton.named_animations.iter() {
+        info!("Animation name {}", animation_name);
         // Making nodes
         let node = animation_graph.add_clip(clip.clone(), 1.0, animation_graph.root);
         // Making a simple hashmap acessor to those nodes
@@ -91,20 +92,38 @@ fn movement_animations(
     animations: Res<Animations>,
 ) {
     for (action, mut animation_transitions, mut animation_player) in action_state.iter_mut() {
-        let new_animation = if action.just_pressed(&PlayerActions::Forward) {
-            animations.named_node.get("KNEELESS_FRONT_WALK")
-        } else if action.just_pressed(&PlayerActions::Backward) {
-            animations.named_node.get("KNEELESS_BACK_WALK")
-        } else if action.just_pressed(&PlayerActions::Left) {
-            animations.named_node.get("KNEELESS_LEFT_WALK")
-        } else if action.just_pressed(&PlayerActions::Right) {
-            animations.named_node.get("KNEELESS_RIGHT_WALK")
+        let (new_animation, transition_duration) = if action.pressed(&PlayerActions::Forward) {
+            (
+                animations.named_node.get("KNEELESS_FRONT_WALK").unwrap(),
+                Duration::from_millis(150),
+            )
+        } else if action.pressed(&PlayerActions::Backward) {
+            (
+                animations.named_node.get("KNEELESS_BACK_WALK").unwrap(),
+                Duration::from_millis(150),
+            )
+        } else if action.pressed(&PlayerActions::Left) {
+            (
+                animations.named_node.get("KNEELESS_LEFT_WALK").unwrap(),
+                Duration::from_millis(150),
+            )
+        } else if action.pressed(&PlayerActions::Right) {
+            (
+                animations.named_node.get("KNEELESS_RIGHT_WALK").unwrap(),
+                Duration::from_millis(150),
+            )
         } else {
-            None
+            // Fallback to idle animation
+            (
+                animations.named_node.get("IDLE_BEGIN").unwrap(),
+                Duration::from_millis(200),
+            )
         };
-        if let Some(new_animation) = new_animation {
+
+        // If the animation differs from the previous one
+        if !animation_player.is_playing_animation(*new_animation) {
             animation_transitions
-                .play(&mut animation_player, *new_animation, Duration::ZERO)
+                .play(&mut animation_player, *new_animation, transition_duration)
                 .repeat();
         }
     }
