@@ -1,6 +1,7 @@
 use super::protocol::PlayerMarker;
 use bevy::prelude::*;
-use bevy_panorbit_camera::{PanOrbitCamera, PanOrbitCameraPlugin};
+use bevy::render::camera::CameraUpdateSystem;
+use bevy_panorbit_camera::{PanOrbitCamera, PanOrbitCameraPlugin, PanOrbitCameraSystemSet};
 use lightyear::prelude::client::Predicted;
 use lightyear::shared::replication::components::Controlled;
 
@@ -34,15 +35,10 @@ impl Plugin for ClientCameraPlugin {
         app.add_plugins(PanOrbitCameraPlugin);
         // Should occur right in the early stages
         app.add_systems(Startup, spawn_camera);
-        // In update for responsiveness
-        app.add_systems(Update, toggle_cam_follow);
-        // Already set it here because I know when we add physics we are going to have headaches with this
-        app.add_systems(
-            PostUpdate,
-            cam_follow_player
-                .before(TransformSystem::TransformPropagate)
-                .run_if(rc_follow_player),
-        );
+        // In pre update for responsiveness when toggled in the same frame i want to adjust
+        app.add_systems(PreUpdate, toggle_cam_follow);
+        // In update
+        app.add_systems(Update, cam_follow_player.run_if(rc_follow_player));
 
         // Debug register
         app.register_type::<CamFeatures>();
