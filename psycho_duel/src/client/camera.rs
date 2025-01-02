@@ -65,7 +65,10 @@ fn spawn_camera(mut commands: Commands) {
         .spawn(Camera3d::default())
         .insert(MarkerPrimaryCamera)
         .insert(Name::new("MainCamera"))
-        .insert(Transform::from_translation(Vec3::new(0.0, 1.5, 5.0)))
+        .insert(
+            Transform::from_translation(Vec3::new(0.0, 1.5, -5.0))
+                .looking_at(Vec3::new(0.0, 0.0, 0.0), Vec3::Y),
+        )
         .insert(PanOrbitCamera::default())
         .insert(CamFeatures::default());
 }
