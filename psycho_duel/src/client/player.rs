@@ -31,24 +31,6 @@ struct ClientIdPlayerMap {
 struct BodyPartMap {
     pub map: HashMap<(ClientId, String), Entity>,
 }
-impl BodyPartMap {
-    /// Function that give me a vector of all
-    pub fn find_part_of_client_id(&self, client_id: &ClientId) -> Vec<Entity> {
-        self.map
-            .iter()
-            .filter_map(
-                |((id, _part_name), entity)| {
-                    if id == client_id {
-                        Some(*entity)
-                    } else {
-                        None
-                    }
-                },
-            )
-            .collect()
-    }
-}
-
 /// Event send everytime we spawn a visual scene
 #[derive(Event)]
 struct TranferAnim {
@@ -74,7 +56,7 @@ impl Plugin for ClientPlayerPlugin {
         app.add_event::<TranferAnim>();
         app.add_event::<ResetAnim>();
 
-        // Update added systems, should only occur when we enter state in game. Any other way doesnt make sense currrently
+        // Update added systems, should only occur when we are in game. Any other way doesnt make sense currrently
         app.add_systems(
             Update,
             (fill_client_id_map, render_predicted_player).run_if(in_state(ClientAppState::Game)),
@@ -94,6 +76,9 @@ impl Plugin for ClientPlayerPlugin {
 
         // In update because observers tend to be disorder
         app.add_systems(Update, insert_input_map);
+
+        // In update because it is added component based
+        app.add_systems(Update, add_animation_player_to_player);
 
         // Fixed update because input systems should be frame unrelated
         app.add_systems(FixedUpdate, move_player);
@@ -176,6 +161,16 @@ fn spawn_visual_scene(
             item
         );
         None
+    }
+}
+
+/// To avoid the usage of unecessary pointers we centralize our animation player on the predicted player marked entity
+fn add_animation_player_to_player(
+    players: Query<Entity, Added<Predicted>>,
+    mut commands: Commands,
+) {
+    for player in players.iter() {
+        commands.entity(player).insert(AnimationPlayer::default());
     }
 }
 
@@ -339,8 +334,7 @@ fn customize_player(
 }
 
 /// Transfer anim target ids, from each main skeleton bone to visual bone
-/// Warning this expects - Visual scenes to have sub bones called root
-/// And that main skeleton has it is first part named armature
+/// Warning this expects - THAT EVERY SINGLE VISUAL SCENE has a root bone
 fn transfer_anim_info(
     mut transfer_anim: EventReader<TranferAnim>,
     mut reset_anim: EventWriter<ResetAnim>,
@@ -368,7 +362,7 @@ fn transfer_anim_info(
 
         // Find his armature - First animation player is usually here
         let old_armature =
-            find_child_with_name_containing(&children, &names, &old_skeleton, "Armature").unwrap();
+            find_child_with_name_containing(&children, &names, &old_skeleton, "Root").unwrap();
 
         // Insert his bones into a map
         let mut old_bones = HashMap::new();
@@ -381,9 +375,6 @@ fn transfer_anim_info(
         // Carrier of anim player should be named root by default
         let new_root =
             find_child_with_name_containing(&children, &names, &new_part, "Root").unwrap();
-
-        // Insert new animation player version
-        commands.entity(new_root).insert(AnimationPlayer::default());
 
         let mut new_bones = HashMap::new();
         collect_bones(&children, &names, &new_root, &mut new_bones);
@@ -399,7 +390,7 @@ fn transfer_anim_info(
                     .entity(*corresponding_bone)
                     .insert(AnimationTarget {
                         id: old_animation_target.id,
-                        player: new_root,
+                        player: *player_ent,
                     });
             }
         }
@@ -437,6 +428,7 @@ fn find_child_with_name_containing(
 
     while let Some(curr_entity) = queue.pop_front() {
         let name_result = names.get(*curr_entity);
+
         if let Ok(name) = name_result {
             if format!("{}", name).contains(name_to_match) {
                 // found the named entity
@@ -459,29 +451,19 @@ fn find_child_with_name_containing(
 /// This must occur every time we spawn our entities
 fn reset_anim(
     mut reset_reader: EventReader<ResetAnim>,
-    player_map: Res<BodyPartMap>,
-    children: Query<&Children>,
-    names: Query<&Name>,
+    player_map: Res<ClientIdPlayerMap>,
     mut animation_player: Query<&mut AnimationPlayer>,
 ) {
     for event in reset_reader.read() {
         let client_id = event.id;
-
-        // Unwrap again because of how unprobable this  is
-        for body_part in player_map.find_part_of_client_id(&client_id) {
-            // Should always have a name
-            let part_name = names.get(body_part).unwrap();
-            if part_name.contains("skeleton") {
-                return;
-            }
-            // Renember root usually carry our animations players and they should always exist from blender
-            let ent =
-                find_child_with_name_containing(&children, &names, &body_part, "Root").unwrap();
-            if let Ok(mut anim_play) = animation_player.get_mut(ent) {
-                anim_play.rewind_all();
-            } else {
-                info!("{}", ent);
-            }
+        let player_ent = player_map.map.get(&client_id).unwrap();
+        if let Ok(mut animation_players) = animation_player.get_mut(*player_ent) {
+            animation_players.rewind_all();
+        } else {
+            warn!(
+                "Something is wrong this client player {} doeesnt have an animations player",
+                client_id
+            )
         }
     }
 }
