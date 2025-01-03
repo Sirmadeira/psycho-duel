@@ -6,7 +6,7 @@ use super::protocol::{CycleTimer, SunMarker};
 const SUN_ORBIT_AROUND: Vec3 = Vec3::ZERO;
 
 /// Radius of our sun orbit, usually we want this guy to be a biggie for reasons
-const SUN_RADIUS: f32 = 15.0;
+const SUN_RADIUS: f32 = 50.0;
 
 /// Min iluminance we dont want our character to be basically black
 const MIN_ILUMINANCE: f32 = 400.0;
@@ -21,8 +21,12 @@ impl Plugin for ClientWorldPlugin {
     fn build(&self, app: &mut App) {
         // Update because we need to check when sun gets spawned
         app.add_systems(Update, formulate_client_sun);
-        app.add_systems(FixedUpdate, orbit_around_point);
+        // Update because it receives server replication and we need to interpolate to that fixed point between our ticks
+        app.add_systems(Update, orbit_around_point);
+        // Spawn our white space also know as player house
         app.add_systems(Startup, spawn_white_space);
+        // Spawns our spotlight that ensures that player see our figure
+        app.add_systems(Startup, spawn_spotlight);
     }
 }
 
@@ -57,8 +61,6 @@ fn formulate_client_sun(
     }
 }
 
-/// Creates the orbit of our sun he start from sin the beginning of the trigonometric circle. Sin equal 0 cosine equal 1.
-/// AS he move to the peak he increases sine which directly increases our light.
 fn orbit_around_point(
     mut query: Query<(&mut Transform, &mut DirectionalLight, &CycleTimer), With<SunMarker>>,
 ) {
@@ -90,7 +92,7 @@ fn orbit_around_point(
             // Calculate the target illuminance based on the angle
             MIN_ILUMINANCE + (MAX_ILUMINANCE - MIN_ILUMINANCE) * angle.sin()
         } else {
-            0.02
+            MIN_ILUMINANCE
         };
 
         // Smoothly interpolate current illuminance to the target
@@ -98,18 +100,50 @@ fn orbit_around_point(
     }
 }
 
+/// Meshes tend to have the necessity of being stored into handles. Why? Well because on later notices if you want to use it
+/// You have an easy way of spawming the same mesh
 fn spawn_white_space(
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
     mut commands: Commands,
 ) {
-    let floor = meshes.add(Plane3d::new(Vec3::Y, Vec2::splat(10.0)));
+    let floor = meshes.add(Plane3d::new(Vec3::Y, Vec2::splat(50.0)));
     let floor_material = MeshMaterial3d(materials.add(StandardMaterial {
         base_color: Color::srgb(0.98, 0.98, 1.0),
-        metallic: 0.9, // High metallic for reflectivity
+        metallic: 0.3, // High metallic for reflectivity
         perceptual_roughness: 0.05,
         reflectance: 0.8,
         ..default()
     }));
+
+    // Spawning base floor
     commands.spawn(Mesh3d(floor.clone())).insert(floor_material);
+}
+
+// TODO SPOTLIGHT AT CENTER OF PLANE POINTING TO FIGURE
+fn spawn_spotlight(
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<StandardMaterial>>,
+    mut commands: Commands,
+) {
+    let spotlight = SpotLight {
+        intensity: 100000000.0,
+        color: Color::WHITE,
+        range: 40.0,
+        // If you insert this you get a cool visual like a light inside a light
+        radius: 0.0,
+        shadows_enabled: true,
+        inner_angle: std::f32::consts::PI / 4.0 * 0.85,
+        outer_angle: std::f32::consts::PI / 4.0,
+        ..default()
+    };
+
+    // This is gonna be looking right below him
+    commands
+        .spawn(spotlight)
+        .insert(Name::new("FigureLight"))
+        .insert(Transform::from_xyz(0.0, 5.0, 20.0).looking_at(Vec3::new(0.0, 0.0, 20.0), Vec3::Y))
+        .insert(Mesh3d(meshes.add(Cuboid::default())))
+        .insert(MeshMaterial3d(materials.add(StandardMaterial::default())))
+        .insert(NoFrustumCulling);
 }

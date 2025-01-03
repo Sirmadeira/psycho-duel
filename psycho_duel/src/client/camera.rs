@@ -35,9 +35,14 @@ impl Plugin for ClientCameraPlugin {
         // Should occur right in the early stages
         app.add_systems(Startup, spawn_camera);
         // In pre update for responsiveness when toggled in the same frame i want to adjust
-        app.add_systems(PreUpdate, toggle_cam_follow);
+        app.add_systems(Update, toggle_cam_follow);
         // In update
-        app.add_systems(Update, cam_follow_player.run_if(rc_follow_player));
+        app.add_systems(
+            PostUpdate,
+            cam_follow_player
+                .before(TransformSystem::TransformPropagate)
+                .run_if(rc_follow_player),
+        );
 
         // Debug register
         app.register_type::<CamFeatures>();
