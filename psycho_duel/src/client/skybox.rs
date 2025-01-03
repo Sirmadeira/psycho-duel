@@ -30,7 +30,7 @@ fn reinterpret_skysheet_image(
         // Sprite sheet is just white, skysheets gives a cool cube effect
         let image_handle = loaded_images
             .map
-            .get("images/skysheet.png")
+            .get("images/spritesheet.png")
             .expect("To find images/skysheet.png loaded");
 
         let sky_image = images.get_mut(image_handle).unwrap();

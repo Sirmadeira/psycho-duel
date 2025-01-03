@@ -1,7 +1,6 @@
 use super::protocol::PlayerMarker;
 use bevy::prelude::*;
-use bevy::render::camera::CameraUpdateSystem;
-use bevy_panorbit_camera::{PanOrbitCamera, PanOrbitCameraPlugin, PanOrbitCameraSystemSet};
+use bevy_panorbit_camera::{PanOrbitCamera, PanOrbitCameraPlugin};
 use lightyear::prelude::client::Predicted;
 use lightyear::shared::replication::components::Controlled;
 

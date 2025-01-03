@@ -22,6 +22,7 @@ impl Plugin for ClientWorldPlugin {
         // Update because we need to check when sun gets spawned
         app.add_systems(Update, formulate_client_sun);
         app.add_systems(FixedUpdate, orbit_around_point);
+        app.add_systems(Startup, spawn_white_space);
     }
 }
 
@@ -95,4 +96,20 @@ fn orbit_around_point(
         // Smoothly interpolate current illuminance to the target
         directional_light.illuminance = directional_light.illuminance.lerp(target_illuminance, 0.1);
     }
+}
+
+fn spawn_white_space(
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<StandardMaterial>>,
+    mut commands: Commands,
+) {
+    let floor = meshes.add(Plane3d::new(Vec3::Y, Vec2::splat(10.0)));
+    let floor_material = MeshMaterial3d(materials.add(StandardMaterial {
+        base_color: Color::srgb(0.98, 0.98, 1.0),
+        metallic: 0.9, // High metallic for reflectivity
+        perceptual_roughness: 0.05,
+        reflectance: 0.8,
+        ..default()
+    }));
+    commands.spawn(Mesh3d(floor.clone())).insert(floor_material);
 }
